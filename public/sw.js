@@ -44,12 +44,20 @@ function isCacheFirst(url) {
   );
 }
 
+/* cache.put throws on partial (206) responses — iOS Safari fetches audio
+ * with Range headers — so only cache full 200s from range-free requests. */
+function isCacheable(request, response) {
+  return response.status === 200 && !request.headers.has("range");
+}
+
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(CACHE_NAME);
   const cached = await cache.match(request);
   const refresh = fetch(request)
     .then((response) => {
-      if (response.ok) cache.put(request, response.clone());
+      if (isCacheable(request, response)) {
+        cache.put(request, response.clone()).catch(() => {});
+      }
       return response;
     })
     .catch(() => undefined);
@@ -60,7 +68,9 @@ async function networkFirst(request, fallbackPath) {
   const cache = await caches.open(CACHE_NAME);
   try {
     const response = await fetch(request);
-    if (response.ok) cache.put(request, response.clone());
+    if (isCacheable(request, response)) {
+      cache.put(request, response.clone()).catch(() => {});
+    }
     return response;
   } catch {
     const cached = await cache.match(request);
