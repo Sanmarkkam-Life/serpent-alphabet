@@ -1,0 +1,14 @@
+{
+  "id": "a",
+  "order": 1,
+  "glyph": "அ",
+  "phonetic": "Ah!",
+  "image": "/letters/a.png",
+  "peculiarities": "அ is the first letter of the Tamil alphabet and its most fundamental sound — the short 'a', as in 'among'. It is the most common vowel in Tamil. Tamil tradition holds அ as the source from which all letters flow: the very first Tirukkural verse begins 'அகர முதல எழுத்தெல்லாம்' — 'As அ is the first of all letters, so is God the first of all the world.'\n\nLook at the shape: a spiral that opens, a stem that rises. Our snake coils and then lifts its head to speak the very first sound.",
+  "vallalar_note": "For Vallalar, the first sound is not merely a letter — it is an opening. அ begins அருட்பெரும்ஜோதி (Arut Perum Jyoti), the Vast Grace-Light he sang of. Every alphabet, every prayer, every act of compassion begins the way this letter begins: with something opening toward the light.",
+  "audio": "/audio/a.mp3",
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": ["ஆ", "ஷ", "ஹ"]
+}
