@@ -70,9 +70,11 @@ that task.
 
 ## Progress storage
 
-Learner progress lives in `localStorage` under the versioned key
-`serpent_progress_v1`. Clearing site data resets the journey. There is no
-server and no account.
+Learner progress (completed letters, XP, level, daily streak, mute
+preference) lives in `localStorage` under the versioned key
+`serpent_progress_v2`. Older `serpent_progress_v1` data migrates
+automatically on first load and is left in place as a backup. Clearing
+site data resets the journey. There is no server and no account.
 
 ## Deploy to Vercel (free)
 
