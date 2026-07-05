@@ -71,9 +71,10 @@ const config: Config = {
         },
         "confetti-fall": {
           "0%": { transform: "translateY(-10vh) rotate(0deg)", opacity: "1" },
+          "75%": { opacity: "1" },
           "100%": {
-            transform: "translateY(105vh) rotate(720deg)",
-            opacity: "0.6",
+            transform: "translateY(88vh) rotate(720deg)",
+            opacity: "0",
           },
         },
         shimmer: {

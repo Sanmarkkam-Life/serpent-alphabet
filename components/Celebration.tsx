@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { LessonImage } from "@/components/ui";
 import type { SnakeLevel } from "@/lib/levels";
 import type { TaskXp } from "@/lib/xp";
@@ -47,18 +48,22 @@ interface ConfettiPiece {
   rounded: boolean;
 }
 
-/** Deterministic spread — no Math.random, so renders are stable. */
+/** Deterministic spread — no Math.random, so renders are stable.
+ *  Every piece finishes (fading to 0) within CONFETTI_LIFETIME_MS. */
 const CONFETTI_PIECES: ConfettiPiece[] = Array.from(
   { length: 24 },
   (_, i): ConfettiPiece => ({
     left: `${(i * 37 + 7) % 100}%`,
-    delay: `${((i * 5) % 12) * 0.18}s`,
-    duration: `${2.6 + (i % 5) * 0.35}s`,
+    delay: `${((i * 5) % 6) * 0.08}s`,
+    duration: `${1.8 + (i % 5) * 0.15}s`,
     color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
     size: 8 + (i % 3) * 4,
     rounded: i % 2 === 0,
   }),
 );
+
+/** The burst is over by ~2.9s; despawn the whole layer at 3s. */
+const CONFETTI_LIFETIME_MS = 3000;
 
 const PRIMARY_LINK_CLASSES =
   "inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-blob bg-serpent px-6 py-3 font-ui text-lg font-bold text-forest-deep shadow-node transition-all duration-150 hover:bg-serpent-deep active:translate-y-1 active:shadow-none";
@@ -78,6 +83,24 @@ export default function Celebration({
   nextLesson,
   summary,
 }: CelebrationProps) {
+  // Confetti is a brief burst: skipped entirely under prefers-reduced-motion,
+  // and the whole layer unmounts once every piece has faded out, so nothing
+  // ever piles up or lingers on screen.
+  const [confettiVisible, setConfettiVisible] = useState(false);
+
+  useEffect(() => {
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (reduceMotion) return;
+    setConfettiVisible(true);
+    const timer = window.setTimeout(
+      () => setConfettiVisible(false),
+      CONFETTI_LIFETIME_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const heading =
     summary.flavor === "testout"
       ? "Tested out. Respect."
@@ -87,27 +110,29 @@ export default function Celebration({
 
   return (
     <div className="relative flex min-h-dvh flex-col overflow-hidden bg-cream">
-      {/* Confetti layer */}
-      <div
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-        aria-hidden="true"
-      >
-        {CONFETTI_PIECES.map((piece, index) => (
-          <span
-            key={index}
-            className="absolute top-0 block animate-confetti-fall"
-            style={{
-              left: piece.left,
-              width: `${piece.size}px`,
-              height: `${piece.size * 1.4}px`,
-              backgroundColor: piece.color,
-              borderRadius: piece.rounded ? "9999px" : "2px",
-              animationDelay: piece.delay,
-              animationDuration: piece.duration,
-            }}
-          />
-        ))}
-      </div>
+      {/* Confetti layer: a short burst, then fully removed. */}
+      {confettiVisible && (
+        <div
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+          aria-hidden="true"
+        >
+          {CONFETTI_PIECES.map((piece, index) => (
+            <span
+              key={index}
+              className="absolute top-0 block animate-confetti-fall opacity-0"
+              style={{
+                left: piece.left,
+                width: `${piece.size}px`,
+                height: `${piece.size * 1.4}px`,
+                backgroundColor: piece.color,
+                borderRadius: piece.rounded ? "9999px" : "2px",
+                animationDelay: piece.delay,
+                animationDuration: piece.duration,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       <main className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-6 px-6 py-10 text-center">
         <div className="w-full animate-pop-in">
