@@ -1,0 +1,18 @@
+{
+  "id": "au",
+  "order": 12,
+  "glyph": "ஔ",
+  "phonetic": "Ow!",
+  "image": "/letters/ஔ.png",
+  "audio": "/audio/ஔ.webm",
+  "peculiarities": "ஔ is a gliding sound: 'ow' as in 'cow'. It starts open like அ and rounds off like உ, two sounds in one breath. It is the last of the twelve vowels and the rarest; you will mostly meet it in a few special words.\n\nThe shape is grand: a curl, a stem, and a tall companion stroke beside it. It is a long journey for our snake, so you get extra time to trace it.",
+  "vallalar_note": null,
+  "trace_path": [],
+  "trace_time_limit": 15,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ஓ",
+    "ஒ",
+    "ள"
+  ]
+}

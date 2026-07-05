@@ -1,0 +1,18 @@
+{
+  "id": "ii",
+  "order": 4,
+  "glyph": "ஈ",
+  "phonetic": "Iih!",
+  "image": "/letters/ஈ.png",
+  "audio": "/audio/ஈ.webm",
+  "peculiarities": "ஈ is இ held longer: the 'ee' in 'see'. Say Ih! and let it ring, and it becomes Iih!. Short இ and long ஈ are a pair, and hearing the length is the whole game.\n\nThe shape starts like இ and then adds one more turn above. Our snake draws the same coil, then lifts its tail with a flourish.",
+  "vallalar_note": null,
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "இ",
+    "ஊ",
+    "ஓ"
+  ]
+}
