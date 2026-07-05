@@ -34,7 +34,8 @@ import { Button, Card } from "@/components/ui";
 
 export interface TaskComponentProps {
   lesson: Lesson;
-  onPass: () => void;
+  /** Called on success with seconds from first touch (for the time bonus). */
+  onPass: (elapsedSeconds?: number) => void;
   onFail: () => void;
   isRedeeming: boolean;
 }
@@ -199,6 +200,8 @@ export default function TraceTask({
   const phaseRef = useRef<Phase>("idle");
   const activePointerRef = useRef<number | null>(null);
   const deadlineRef = useRef<number | null>(null);
+  /** performance.now() at the first touch; drives the XP time bonus. */
+  const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const coveragePctRef = useRef(0);
@@ -300,9 +303,13 @@ export default function TraceTask({
       }
       draw();
 
+      const elapsedSeconds =
+        startTimeRef.current !== null
+          ? (performance.now() - startTimeRef.current) / 1000
+          : undefined;
       holdTimeoutRef.current = setTimeout(
         () => {
-          if (outcome === "pass") onPassRef.current();
+          if (outcome === "pass") onPassRef.current(elapsedSeconds);
           else onFailRef.current();
         },
         outcome === "pass" ? SUCCESS_HOLD_MS : FAIL_HOLD_MS,
@@ -315,7 +322,8 @@ export default function TraceTask({
   const startTimer = useCallback(() => {
     if (deadlineRef.current !== null) return;
     const totalMs = Math.max(1, lesson.trace_time_limit) * 1000;
-    deadlineRef.current = performance.now() + totalMs;
+    startTimeRef.current = performance.now();
+    deadlineRef.current = startTimeRef.current + totalMs;
     const tick = () => {
       rafRef.current = null;
       if (finishedRef.current || deadlineRef.current === null) return;
