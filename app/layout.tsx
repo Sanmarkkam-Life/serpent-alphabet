@@ -20,7 +20,7 @@ const notoSansTamil = localFont({
 export const metadata: Metadata = {
   title: "Serpent Alphabet",
   description:
-    "Learn the Tamil alphabet letter by letter with a friendly snake guide — trace, pronounce, and master each sound.",
+    "Learn the Tamil alphabet letter by letter with a friendly snake guide. Trace, pronounce, and master each sound.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

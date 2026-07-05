@@ -338,7 +338,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
       setAudioError(
         err instanceof Error
           ? err.message
-          : "Could not start recording — check microphone permission.",
+          : "Could not start recording. Check microphone permission.",
       );
     }
   };
@@ -357,7 +357,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
       setRecording(recorded);
     } catch (err) {
       setAudioError(
-        err instanceof Error ? err.message : "Recording failed — try again.",
+        err instanceof Error ? err.message : "Recording failed. Try again.",
       );
     }
   };
@@ -369,7 +369,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
     const audio = new Audio(recorded.url);
     playbackRef.current = audio;
     void audio.play().catch(() => {
-      setAudioError("Playback failed — try the download link instead.");
+      setAudioError("Playback failed. Try the download link instead.");
     });
   };
 
@@ -413,7 +413,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
           <p className="font-ui text-sm font-bold text-forest">
             Testing recorded path for{" "}
             <span className="font-tamil">{selectedLesson.glyph}</span> (
-            {selectedLesson.id}) — {recordedPath.length} points
+            {selectedLesson.id}): {recordedPath.length} points
           </p>
         </Card>
         {testOutcome === null ? (
@@ -481,7 +481,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
       <Card>
         <p className="font-ui text-sm text-forest">
           Trace the letter with <strong>one continuous stroke</strong>, exactly
-          the way a learner should write it. If possible, record on a phone —
+          the way a learner should write it. If possible, record on a phone:
           this canvas has the same geometry learners see.
         </p>
       </Card>
@@ -502,7 +502,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
         >
           {lessons.map((lesson) => (
             <option key={lesson.id} value={lesson.id}>
-              {lesson.glyph} — {lesson.id}
+              {lesson.glyph} · {lesson.id}
             </option>
           ))}
         </select>
@@ -527,7 +527,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
           <p className="font-ui text-sm text-forest">
             {recordedPath
               ? `Recorded: ${recordedPath.length} points`
-              : "No stroke recorded yet — draw on the canvas."}
+              : "No stroke recorded yet. Draw on the canvas."}
           </p>
           <Button
             variant="secondary"
@@ -641,8 +641,8 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
                 <p className="font-ui text-xs text-forest-soft">
                   Drop the file into /public/audio/ and set the lesson JSON
                   &quot;audio&quot; field to match (e.g.
-                  &quot;/audio/a.m4a&quot;). Browsers record m4a/webm — either
-                  plays fine; convert to mp3 only if you prefer.
+                  &quot;/audio/a.m4a&quot;). Browsers record m4a/webm; either
+                  plays fine. Convert to mp3 only if you prefer.
                 </p>
               </div>
             )}

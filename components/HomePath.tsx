@@ -133,7 +133,7 @@ function LessonNode({
         {circle}
         {label}
         <span className="sr-only">
-          Lesson {lesson.order}, {lesson.phonetic} — locked. Finish the earlier
+          Lesson {lesson.order}, {lesson.phonetic}. Locked: finish the earlier
           letters to open it.
         </span>
       </div>
@@ -146,8 +146,8 @@ function LessonNode({
       className="flex w-28 flex-col items-center"
       aria-label={
         status === "completed"
-          ? `Lesson ${lesson.order}, ${lesson.phonetic} — completed. Tap to replay.`
-          : `Lesson ${lesson.order}, ${lesson.phonetic} — start this lesson.`
+          ? `Lesson ${lesson.order}, ${lesson.phonetic}. Completed, tap to review.`
+          : `Lesson ${lesson.order}, ${lesson.phonetic}. Start this lesson.`
       }
     >
       {circle}
@@ -218,7 +218,7 @@ export default function HomePath({ lessons }: HomePathProps) {
 
       {lessons.length === 0 && (
         <p className="py-10 text-center font-ui text-sm font-semibold text-sage-500">
-          No lessons yet — the snake is still gathering letters.
+          No lessons yet. The snake is still gathering letters.
         </p>
       )}
     </div>

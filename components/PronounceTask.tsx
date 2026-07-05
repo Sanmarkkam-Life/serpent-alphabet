@@ -189,7 +189,7 @@ export default function PronounceTask({
     } catch {
       if (mountedRef.current) {
         setRecordingState(recordedUrlRef.current ? "recorded" : "idle");
-        setNote("That take didn't record — give it one more try.");
+        setNote("That take didn't record. Give it one more try.");
       }
     } finally {
       busyRef.current = false;
@@ -236,6 +236,11 @@ export default function PronounceTask({
           sounds like{" "}
           <span className="text-serpent-deep">{lesson.phonetic}</span>
         </span>
+        {!engaged && (
+          <p className="font-ui text-sm font-medium text-forest-soft">
+            Listen first, then try it with your own voice.
+          </p>
+        )}
       </div>
 
       {/* Teacher side */}
@@ -279,7 +284,7 @@ export default function PronounceTask({
               {lesson.phonetic}
             </span>
             <p className="font-ui text-base font-semibold text-forest">
-              Say it aloud: {lesson.phonetic} — the sound of{" "}
+              Say it aloud: {lesson.phonetic}, the sound of{" "}
               <span className="font-tamil font-bold">{lesson.glyph}</span>
             </p>
           </div>
@@ -294,7 +299,7 @@ export default function PronounceTask({
 
         {micFallback ? (
           <p className="font-ui text-base leading-relaxed text-forest">
-            No microphone? No problem — practice aloud a few times.
+            No microphone? No problem. Practice aloud a few times.
           </p>
         ) : recordingState === "recording" ? (
           <button
@@ -374,8 +379,8 @@ export default function PronounceTask({
       </Card>
 
       {/* Self-assessment gate */}
-      <div className="mt-auto pt-2">
-        {engaged ? (
+      {engaged && (
+        <div className="mt-auto pt-2">
           <div className="flex animate-pop-in flex-col gap-3">
             <p className="text-center font-ui text-lg font-extrabold text-forest">
               {isRedeeming
@@ -389,12 +394,8 @@ export default function PronounceTask({
               Let me try again
             </Button>
           </div>
-        ) : (
-          <p className="text-center font-ui text-base font-medium text-forest-soft">
-            Listen first, then try it with your own voice.
-          </p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

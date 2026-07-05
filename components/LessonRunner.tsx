@@ -41,13 +41,13 @@ export interface LessonRunnerProps {
 type Phase = "task" | "fail" | "celebrate";
 
 const FAIL_MESSAGES: Record<TaskType, string> = {
-  learn: "Oops — the snake lost its place. One more look!",
-  pronounce: "Almost — your snake wants one more try",
+  learn: "Oops! The snake lost its place. One more look!",
+  pronounce: "Almost! Your snake wants one more try",
   trace: "The snake slipped! Try again",
-  recognize: "Not that one — look again",
+  recognize: "Not that one. Look again!",
 };
 
-const GENERIC_FAIL_MESSAGE = "Oops — the snake lost its place. One more look!";
+const GENERIC_FAIL_MESSAGE = "Oops! The snake lost its place. One more look!";
 
 function failMessageFor(type: TaskType | null): string {
   return type === null ? GENERIC_FAIL_MESSAGE : FAIL_MESSAGES[type];
@@ -178,7 +178,7 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
             {failMessageFor(failedType)}
           </h1>
           <p className="text-balance font-ui text-base leading-relaxed text-forest-soft">
-            You&apos;ll see that one again soon — pass it twice in a row to
+            You&apos;ll see that one again soon. Pass it twice in a row to
             clear it.
           </p>
           <Button

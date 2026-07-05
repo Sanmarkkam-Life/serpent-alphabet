@@ -489,7 +489,7 @@ export default function TraceTask({
             {lesson.glyph}
           </p>
           <p className="mt-4 font-ui text-base text-forest">
-            Trace path not yet recorded — open Author Mode
+            Trace path not yet recorded. Open Author Mode to add one.
           </p>
           {process.env.NODE_ENV === "development" && (
             <Link
@@ -522,7 +522,7 @@ export default function TraceTask({
       <div className="mb-3 text-center">
         {isRedeeming && (
           <p className="mx-auto mb-2 inline-block rounded-full bg-wisdom-soft px-3 py-1 font-ui text-xs font-bold text-wisdom-deep">
-            Redemption round — steady does it
+            Redemption round: steady does it
           </p>
         )}
         <h2 className="font-ui text-2xl font-bold text-forest">

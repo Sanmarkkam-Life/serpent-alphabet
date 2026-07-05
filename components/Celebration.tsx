@@ -91,7 +91,7 @@ export default function Celebration({ lesson, nextLesson }: CelebrationProps) {
             {lesson.glyph}
           </span>
           <p className="text-balance font-ui text-base leading-relaxed text-forest-soft">
-            Your snake is coiled up with pride — the sound{" "}
+            Your snake is coiled up with pride. The sound{" "}
             <span className="font-extrabold text-serpent-deep">
               {lesson.phonetic}
             </span>{" "}
@@ -123,7 +123,7 @@ export default function Celebration({ lesson, nextLesson }: CelebrationProps) {
         ) : (
           <div className="flex w-full flex-col items-center gap-4">
             <p className="text-balance font-ui text-lg font-bold text-forest">
-              You&apos;ve traced every letter on the path so far — more coming
+              You&apos;ve traced every letter on the path so far. More coming
               soon!
             </p>
             <Link href="/" className={PRIMARY_LINK_CLASSES}>
