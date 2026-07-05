@@ -231,7 +231,7 @@ export default function HomePath({ lessons }: HomePathProps) {
         );
       })}
 
-      {/* The trail keeps going — more letters are hatching. */}
+      {/* The trail keeps going: more letters are hatching. */}
       {lessons.length > 0 && (
         <div>
           <Connector from={slotAt(lessons.length - 1)} to={tailSlot} />

@@ -412,7 +412,7 @@ export default function TraceTask({
     if (finishedRef.current) return;
     if (activePointerRef.current !== e.pointerId) return;
     const session = sessionRef.current;
-    if (!session) return; // no active session — ignore stray moves
+    if (!session) return; // no active session: ignore stray moves
     if (e.nativeEvent.cancelable) e.preventDefault();
 
     const p = pointFromEvent(e);
