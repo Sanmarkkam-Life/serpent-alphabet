@@ -1,0 +1,59 @@
+name: Sync Drive Content
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # every 6h (GitHub may delay; use manual run when you want it now)
+  workflow_dispatch: {} # manual "Run workflow" button
+
+permissions:
+  contents: write # REQUIRED — without this the push 403s even with the default token
+
+concurrency:
+  group: drive-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Sync content from Google Drive
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        run: node scripts/sync-drive.mjs
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # public/letters and public/audio always exist (committed READMEs).
+          # The manifest only exists after a run that synced >=1 file, so add
+          # it conditionally — otherwise git add fails on the 0-file first run
+          # and hides the Shared-Drive diagnostic.
+          git add public/letters public/audio
+          if [ -f scripts/.drive-manifest.json ]; then
+            git add scripts/.drive-manifest.json
+          fi
+          if git diff --cached --quiet; then
+            echo "No content changes to commit."
+            exit 0
+          fi
+          # Commits made with the built-in GITHUB_TOKEN do not trigger further
+          # workflow runs, so this cannot self-trigger. [skip ci] is belt-and-suspenders.
+          git commit -m "chore: sync content from Google Drive [skip ci]"
+          git push
