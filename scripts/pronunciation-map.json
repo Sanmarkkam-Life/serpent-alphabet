@@ -1,0 +1,95 @@
+{
+  "letters": [
+    {
+      "glyph": "அ",
+      "id": "a",
+      "tamilText": "அ",
+      "phoneticHint": "ah",
+      "notes": "Short a, as in 'among'"
+    },
+    {
+      "glyph": "ஆ",
+      "id": "aa",
+      "tamilText": "ஆ",
+      "phoneticHint": "aah",
+      "notes": "Long a, as in 'father'"
+    },
+    {
+      "glyph": "இ",
+      "id": "i",
+      "tamilText": "இ",
+      "phoneticHint": "ih",
+      "notes": "Short i, as in 'it'"
+    },
+    {
+      "glyph": "ஈ",
+      "id": "ii",
+      "tamilText": "ஈ",
+      "phoneticHint": "eeh",
+      "notes": "Long i, as in 'feet'"
+    },
+    {
+      "glyph": "உ",
+      "id": "u",
+      "tamilText": "உ",
+      "phoneticHint": "uh",
+      "notes": "Short u, as in 'put'"
+    },
+    {
+      "glyph": "ஊ",
+      "id": "uu",
+      "tamilText": "ஊ",
+      "phoneticHint": "ooh",
+      "notes": "Long u, as in 'food'"
+    },
+    {
+      "glyph": "எ",
+      "id": "e",
+      "tamilText": "எ",
+      "phoneticHint": "eh",
+      "notes": "Short e, as in 'get'"
+    },
+    {
+      "glyph": "ஏ",
+      "id": "ee",
+      "tamilText": "ஏ",
+      "phoneticHint": "ay",
+      "notes": "Long e, as in 'say'"
+    },
+    {
+      "glyph": "ஐ",
+      "id": "ai",
+      "tamilText": "ஐ",
+      "phoneticHint": "eye",
+      "notes": "Diphthong ai, as in 'my'"
+    },
+    {
+      "glyph": "ஒ",
+      "id": "o",
+      "tamilText": "ஒ",
+      "phoneticHint": "oh",
+      "notes": "Short o, as in 'hot'"
+    },
+    {
+      "glyph": "ஓ",
+      "id": "oo",
+      "tamilText": "ஓ",
+      "phoneticHint": "oh (long)",
+      "notes": "Long o, as in 'go'"
+    },
+    {
+      "glyph": "ஔ",
+      "id": "au",
+      "tamilText": "ஔ",
+      "phoneticHint": "ow",
+      "notes": "Diphthong au, as in 'cow'"
+    },
+    {
+      "glyph": "ஃ",
+      "id": "aytham",
+      "tamilText": "ஃ",
+      "phoneticHint": "akh",
+      "notes": "Aytham, a soft aspiration"
+    }
+  ]
+}
