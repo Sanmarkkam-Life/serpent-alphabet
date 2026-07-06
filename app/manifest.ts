@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Serpent Alphabet",
     short_name: "Serpent",
     description:
-      "Learn the Tamil alphabet letter by letter with a friendly snake guide — trace, pronounce, and master each sound.",
+      "Learn the Tamil alphabet letter by letter with a friendly snake guide. Trace, pronounce, and master each sound.",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",

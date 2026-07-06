@@ -9,7 +9,7 @@ import AuthorStudio from "@/components/AuthorStudio";
  */
 
 export const metadata: Metadata = {
-  title: "Author Mode — Serpent Alphabet",
+  title: "Author Mode · Serpent Alphabet",
   robots: { index: false, follow: false },
 };
 

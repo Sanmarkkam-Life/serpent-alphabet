@@ -34,7 +34,8 @@ import { Button, Card } from "@/components/ui";
 
 export interface TaskComponentProps {
   lesson: Lesson;
-  onPass: () => void;
+  /** Called on success with seconds from first touch (for the time bonus). */
+  onPass: (elapsedSeconds?: number) => void;
   onFail: () => void;
   isRedeeming: boolean;
 }
@@ -199,6 +200,8 @@ export default function TraceTask({
   const phaseRef = useRef<Phase>("idle");
   const activePointerRef = useRef<number | null>(null);
   const deadlineRef = useRef<number | null>(null);
+  /** performance.now() at the first touch; drives the XP time bonus. */
+  const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const coveragePctRef = useRef(0);
@@ -300,9 +303,13 @@ export default function TraceTask({
       }
       draw();
 
+      const elapsedSeconds =
+        startTimeRef.current !== null
+          ? (performance.now() - startTimeRef.current) / 1000
+          : undefined;
       holdTimeoutRef.current = setTimeout(
         () => {
-          if (outcome === "pass") onPassRef.current();
+          if (outcome === "pass") onPassRef.current(elapsedSeconds);
           else onFailRef.current();
         },
         outcome === "pass" ? SUCCESS_HOLD_MS : FAIL_HOLD_MS,
@@ -315,7 +322,8 @@ export default function TraceTask({
   const startTimer = useCallback(() => {
     if (deadlineRef.current !== null) return;
     const totalMs = Math.max(1, lesson.trace_time_limit) * 1000;
-    deadlineRef.current = performance.now() + totalMs;
+    startTimeRef.current = performance.now();
+    deadlineRef.current = startTimeRef.current + totalMs;
     const tick = () => {
       rafRef.current = null;
       if (finishedRef.current || deadlineRef.current === null) return;
@@ -404,7 +412,7 @@ export default function TraceTask({
     if (finishedRef.current) return;
     if (activePointerRef.current !== e.pointerId) return;
     const session = sessionRef.current;
-    if (!session) return; // no active session — ignore stray moves
+    if (!session) return; // no active session: ignore stray moves
     if (e.nativeEvent.cancelable) e.preventDefault();
 
     const p = pointFromEvent(e);
@@ -489,7 +497,7 @@ export default function TraceTask({
             {lesson.glyph}
           </p>
           <p className="mt-4 font-ui text-base text-forest">
-            Trace path not yet recorded — open Author Mode
+            Trace path not yet recorded. Open Author Mode to add one.
           </p>
           {process.env.NODE_ENV === "development" && (
             <Link
@@ -522,7 +530,7 @@ export default function TraceTask({
       <div className="mb-3 text-center">
         {isRedeeming && (
           <p className="mx-auto mb-2 inline-block rounded-full bg-wisdom-soft px-3 py-1 font-ui text-xs font-bold text-wisdom-deep">
-            Redemption round — steady does it
+            Redemption round: steady does it
           </p>
         )}
         <h2 className="font-ui text-2xl font-bold text-forest">

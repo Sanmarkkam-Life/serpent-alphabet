@@ -27,7 +27,7 @@ export default function HomePage() {
           Serpent Alphabet
         </h1>
         <p className="mt-1 font-ui text-sm font-semibold text-forest-soft">
-          Learn Tamil, one letter at a time
+          Learn the Tamil alphabet. One snake at a time.
         </p>
         {/* A quiet serpent squiggle to set the trail motif. */}
         <svg
@@ -51,7 +51,7 @@ export default function HomePage() {
       </section>
 
       <footer className="mt-auto pt-12 text-center font-ui text-xs text-sage-500">
-        Made by Pushkar · Sanmarkkam Life
+        Made by Sanmarkkam Life
       </footer>
     </main>
   );

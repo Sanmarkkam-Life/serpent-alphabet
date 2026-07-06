@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { levelForXp } from "@/lib/levels";
 import {
+  defaultProgress,
   isLessonComplete,
   isLessonUnlocked,
   loadProgress,
+  setMute,
   type Progress,
 } from "@/lib/progress";
 
@@ -133,7 +136,7 @@ function LessonNode({
         {circle}
         {label}
         <span className="sr-only">
-          Lesson {lesson.order}, {lesson.phonetic} — locked. Finish the earlier
+          Lesson {lesson.order}, {lesson.phonetic}. Locked: finish the earlier
           letters to open it.
         </span>
       </div>
@@ -146,8 +149,8 @@ function LessonNode({
       className="flex w-28 flex-col items-center"
       aria-label={
         status === "completed"
-          ? `Lesson ${lesson.order}, ${lesson.phonetic} — completed. Tap to replay.`
-          : `Lesson ${lesson.order}, ${lesson.phonetic} — start this lesson.`
+          ? `Lesson ${lesson.order}, ${lesson.phonetic}. Completed, tap to review.`
+          : `Lesson ${lesson.order}, ${lesson.phonetic}. Start this lesson.`
       }
     >
       {circle}
@@ -158,13 +161,18 @@ function LessonNode({
 
 export default function HomePath({ lessons }: HomePathProps) {
   // Default (server-matching) state: no progress yet.
-  const [progress, setProgress] = useState<Progress>({ completed: [] });
+  const [progress, setProgress] = useState<Progress>(defaultProgress());
 
   useEffect(() => {
     setProgress(loadProgress());
   }, []);
 
   const orderedIds = lessons.map((lesson) => lesson.id);
+  const level = levelForXp(progress.xp);
+
+  const toggleMute = (): void => {
+    setProgress(setMute(!progress.mute));
+  };
 
   function statusFor(lessonId: string): NodeStatus {
     if (isLessonComplete(progress, lessonId)) return "completed";
@@ -176,6 +184,36 @@ export default function HomePath({ lessons }: HomePathProps) {
 
   return (
     <div className="relative">
+      {/* Snake stats: level badge, lifetime XP, quiet streak, mute. */}
+      <div className="mb-6 flex flex-wrap items-center justify-center gap-2">
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full bg-sage-100 px-3.5 py-2 font-ui text-sm font-extrabold text-forest"
+          aria-label={`Level: ${level.name}`}
+        >
+          <span aria-hidden="true">{level.emoji}</span>
+          {level.name}
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-3.5 py-2 font-ui text-sm font-extrabold text-forest">
+          ⚡ {progress.xp} XP
+        </span>
+        {progress.streakCount >= 2 && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-serpent-soft px-3.5 py-2 font-ui text-sm font-extrabold text-forest-deep"
+            aria-label={`${progress.streakCount} day streak`}
+          >
+            🔥 {progress.streakCount}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={toggleMute}
+          aria-label={progress.mute ? "Unmute effects" : "Mute effects"}
+          title={progress.mute ? "Unmute effects" : "Mute effects"}
+          className="flex h-12 w-12 items-center justify-center rounded-full text-xl"
+        >
+          <span aria-hidden="true">{progress.mute ? "🔇" : "🔉"}</span>
+        </button>
+      </div>
       {lessons.map((lesson, index) => {
         const slot = slotAt(index);
         return (
@@ -193,7 +231,7 @@ export default function HomePath({ lessons }: HomePathProps) {
         );
       })}
 
-      {/* The trail keeps going — more letters are hatching. */}
+      {/* The trail keeps going: more letters are hatching. */}
       {lessons.length > 0 && (
         <div>
           <Connector from={slotAt(lessons.length - 1)} to={tailSlot} />
@@ -218,7 +256,7 @@ export default function HomePath({ lessons }: HomePathProps) {
 
       {lessons.length === 0 && (
         <p className="py-10 text-center font-ui text-sm font-semibold text-sage-500">
-          No lessons yet — the snake is still gathering letters.
+          No lessons yet. The snake is still gathering letters.
         </p>
       )}
     </div>

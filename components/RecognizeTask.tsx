@@ -2,16 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Lesson } from "@/lib/types";
+import { audioFileExists } from "@/lib/audio";
 
 /**
- * Recognize task — "Which one is அ (Ah!)?"
+ * Recognize task: "Which is the correct one?"
+ * The cue is the SOUND (speaker button + phonetic text). The target glyph
+ * must never appear in the question, or it would give the answer away.
  * A 2x2 grid of large glyph cards; the first tap decides. The parent
  * LessonRunner remounts this component with a fresh key on every
  * presentation, so the shuffle-in-useState runs anew each time.
  */
 export interface TaskComponentProps {
   lesson: Lesson;
-  onPass: () => void;
+  /** Called on a correct pick with the seconds taken (for the time bonus). */
+  onPass: (elapsedSeconds?: number) => void;
   onFail: () => void;
   isRedeeming: boolean;
 }
@@ -22,6 +26,7 @@ const PASS_DELAY_MS = 500;
 const FAIL_DELAY_MS = 700;
 
 type Outcome = "idle" | "correct" | "wrong";
+type CueAudio = "checking" | "available" | "missing";
 
 /** Fisher–Yates shuffle; returns a new array, never mutates the input. */
 function shuffle(items: readonly string[]): string[] {
@@ -47,18 +52,71 @@ export default function RecognizeTask({
   );
   const [outcome, setOutcome] = useState<Outcome>("idle");
   const [tappedIndex, setTappedIndex] = useState<number | null>(null);
+  const [cueAudio, setCueAudio] = useState<CueAudio>("checking");
+  const [cuePlaying, setCuePlaying] = useState(false);
 
   const timerRef = useRef<number | null>(null);
   const resolvedRef = useRef(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const mountedRef = useRef(true);
+  /** The answer clock starts when the question appears. */
+  const shownAtRef = useRef<number>(performance.now());
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (timerRef.current !== null) {
         window.clearTimeout(timerRef.current);
         timerRef.current = null;
       }
+      audioRef.current?.pause();
     };
   }, []);
+
+  // Does the reference audio actually exist? (Missing files never crash.)
+  useEffect(() => {
+    let cancelled = false;
+    audioFileExists(lesson.audio).then((exists) => {
+      if (!cancelled && mountedRef.current) {
+        setCueAudio(exists ? "available" : "missing");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lesson.audio]);
+
+  /**
+   * Play the reference pronunciation. This is core learning content: it is
+   * deliberately NOT affected by the SFX mute toggle.
+   */
+  const playCue = (): void => {
+    let element = audioRef.current;
+    if (!element) {
+      element = new Audio(lesson.audio);
+      element.preload = "auto";
+      element.onended = () => {
+        if (mountedRef.current) setCuePlaying(false);
+      };
+      element.onerror = () => {
+        if (mountedRef.current) {
+          setCueAudio("missing");
+          setCuePlaying(false);
+        }
+      };
+      audioRef.current = element;
+    }
+    element.currentTime = 0;
+    element.play().then(
+      () => {
+        if (mountedRef.current) setCuePlaying(true);
+      },
+      () => {
+        if (mountedRef.current) setCueAudio("missing");
+      },
+    );
+  };
 
   const decided = outcome !== "idle";
   const correctIndex = options.indexOf(lesson.glyph);
@@ -66,6 +124,7 @@ export default function RecognizeTask({
   const handleTap = (index: number): void => {
     if (decided || resolvedRef.current) return;
     const isCorrect = options[index] === lesson.glyph;
+    const elapsedSeconds = (performance.now() - shownAtRef.current) / 1000;
     setTappedIndex(index);
     setOutcome(isCorrect ? "correct" : "wrong");
     timerRef.current = window.setTimeout(
@@ -74,7 +133,7 @@ export default function RecognizeTask({
         if (resolvedRef.current) return;
         resolvedRef.current = true;
         if (isCorrect) {
-          onPass();
+          onPass(elapsedSeconds);
         } else {
           onFail();
         }
@@ -108,9 +167,33 @@ export default function RecognizeTask({
   return (
     <div className="mx-auto w-full max-w-md">
       <h2 className="text-center font-ui text-2xl font-bold text-forest">
-        Which one is <span className="font-tamil">{lesson.glyph}</span> (
-        {lesson.phonetic})?
+        Which is the correct one?
       </h2>
+
+      {/* The cue is the sound, never the glyph. */}
+      <div className="mt-3 flex items-center justify-center gap-3">
+        {cueAudio === "available" && (
+          <button
+            type="button"
+            onClick={playCue}
+            aria-label={`Play the sound ${lesson.phonetic}`}
+            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-serpent text-2xl text-forest-deep shadow-node transition-all duration-150 hover:bg-serpent-deep active:translate-y-1 active:shadow-none"
+          >
+            {cuePlaying && (
+              <span
+                className="absolute inset-0 animate-ping rounded-full bg-serpent-soft opacity-70"
+                aria-hidden="true"
+              />
+            )}
+            <span className="relative" aria-hidden="true">
+              🔊
+            </span>
+          </button>
+        )}
+        <span className="font-ui text-2xl font-extrabold text-serpent-deep">
+          {lesson.phonetic}
+        </span>
+      </div>
 
       {isRedeeming && (
         <p className="mt-2 text-center font-ui text-sm font-semibold text-wisdom-deep">
