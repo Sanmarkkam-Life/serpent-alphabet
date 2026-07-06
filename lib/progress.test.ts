@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   defaultProgress,
+  isLessonUnlocked,
   migrateV1ToV2,
   normalizeProgress,
 } from "./progress";
@@ -14,7 +15,13 @@ describe("migrateV1ToV2", () => {
       streakCount: 0,
       lastActiveDate: null,
       mute: false,
+      // Anyone with completed lessons has effectively seen the beginning.
+      introViewed: true,
     });
+  });
+
+  it("leaves the intro unviewed for fresh v1 data", () => {
+    expect(migrateV1ToV2({ completed: [] }).introViewed).toBe(false);
   });
 
   it("treats malformed v1 as empty progress", () => {
@@ -33,8 +40,24 @@ describe("normalizeProgress", () => {
       streakCount: 3,
       lastActiveDate: "2026-07-05",
       mute: true,
+      introViewed: true,
     };
     expect(normalizeProgress(valid)).toEqual(valid);
+  });
+
+  it("backfills introViewed for payloads with completed lessons", () => {
+    const legacy = { ...defaultProgress(), completed: ["a"] } as Record<
+      string,
+      unknown
+    >;
+    delete legacy.introViewed;
+    expect(normalizeProgress(legacy).introViewed).toBe(true);
+  });
+
+  it("keeps introViewed false for fresh payloads without it", () => {
+    const legacy = { ...defaultProgress() } as Record<string, unknown>;
+    delete legacy.introViewed;
+    expect(normalizeProgress(legacy).introViewed).toBe(false);
   });
 
   it("repairs malformed fields to defaults without losing good ones", () => {
@@ -60,5 +83,27 @@ describe("normalizeProgress", () => {
 
   it("rounds fractional xp", () => {
     expect(normalizeProgress({ ...defaultProgress(), xp: 10.6 }).xp).toBe(11);
+  });
+});
+
+describe("isLessonUnlocked", () => {
+  const IDS = ["a", "aa", "i"];
+
+  it("keeps every lesson locked until the intro is viewed", () => {
+    const fresh = defaultProgress();
+    expect(isLessonUnlocked(fresh, IDS, "a")).toBe(false);
+    const viewed = { ...fresh, introViewed: true };
+    expect(isLessonUnlocked(viewed, IDS, "a")).toBe(true);
+    expect(isLessonUnlocked(viewed, IDS, "aa")).toBe(false);
+  });
+
+  it("unlocks exactly the next lesson as earlier ones complete", () => {
+    const progress = {
+      ...defaultProgress(),
+      introViewed: true,
+      completed: ["a"],
+    };
+    expect(isLessonUnlocked(progress, IDS, "aa")).toBe(true);
+    expect(isLessonUnlocked(progress, IDS, "i")).toBe(false);
   });
 });

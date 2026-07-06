@@ -25,6 +25,13 @@ export interface Progress {
   lastActiveDate: string | null;
   /** Mutes feedback SFX only. Never silences reference pronunciation. */
   mute: boolean;
+  /**
+   * True once "The Soul Letters" intro has been viewed; the first lesson
+   * stays locked until then. Additive field: older v2 payloads without it
+   * normalize to false, except that anyone with a completed lesson is
+   * treated as having seen it (they were never meant to be re-locked).
+   */
+  introViewed: boolean;
 }
 
 export function defaultProgress(): Progress {
@@ -34,6 +41,7 @@ export function defaultProgress(): Progress {
     streakCount: 0,
     lastActiveDate: null,
     mute: false,
+    introViewed: false,
   };
 }
 
@@ -49,8 +57,11 @@ export function normalizeProgress(raw: unknown): Progress {
   const base = defaultProgress();
   if (typeof raw !== "object" || raw === null) return base;
   const obj = raw as Record<string, unknown>;
+  const completed = isStringArray(obj.completed)
+    ? obj.completed
+    : base.completed;
   return {
-    completed: isStringArray(obj.completed) ? obj.completed : base.completed,
+    completed,
     xp:
       typeof obj.xp === "number" && Number.isFinite(obj.xp) && obj.xp >= 0
         ? Math.round(obj.xp)
@@ -67,6 +78,10 @@ export function normalizeProgress(raw: unknown): Progress {
         ? obj.lastActiveDate
         : base.lastActiveDate,
     mute: typeof obj.mute === "boolean" ? obj.mute : base.mute,
+    // Backfill: anyone who has completed a lesson has seen the beginning.
+    introViewed:
+      (typeof obj.introViewed === "boolean" && obj.introViewed) ||
+      completed.length > 0,
   };
 }
 
@@ -81,7 +96,8 @@ export function migrateV1ToV2(v1: unknown): Progress {
     isStringArray((v1 as { completed?: unknown }).completed)
       ? (v1 as { completed: string[] }).completed
       : [];
-  return { ...defaultProgress(), completed };
+  // Normalize applies the intro backfill for users with completed lessons.
+  return normalizeProgress({ ...defaultProgress(), completed });
 }
 
 function readKey(key: string): unknown {
@@ -169,6 +185,15 @@ export function recordTaskActivity(now: Date = new Date()): Progress {
   return next;
 }
 
+/** Mark "The Soul Letters" intro as viewed; unlocks the first lesson. */
+export function markIntroViewed(): Progress {
+  const progress = loadProgress();
+  if (progress.introViewed) return progress;
+  const next: Progress = { ...progress, introViewed: true };
+  saveProgress(next);
+  return next;
+}
+
 export function setMute(mute: boolean): Progress {
   const progress = loadProgress();
   if (progress.mute === mute) return progress;
@@ -186,14 +211,16 @@ export function isLessonComplete(progress: Progress, lessonId: string): boolean 
 }
 
 /**
- * A lesson is unlocked when every lesson before it (by order) is complete.
- * `orderedIds` must be the full lesson id list sorted by `order`.
+ * A lesson is unlocked when the intro has been viewed and every lesson
+ * before it (by order) is complete. `orderedIds` must be the full lesson
+ * id list sorted by `order`.
  */
 export function isLessonUnlocked(
   progress: Progress,
   orderedIds: readonly string[],
   lessonId: string,
 ): boolean {
+  if (!progress.introViewed) return false;
   const index = orderedIds.indexOf(lessonId);
   if (index === -1) return false;
   return orderedIds

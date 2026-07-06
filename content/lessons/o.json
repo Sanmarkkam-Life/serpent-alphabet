@@ -1,0 +1,18 @@
+{
+  "id": "o",
+  "order": 10,
+  "glyph": "ஒ",
+  "phonetic": "Oh!",
+  "image": "/letters/ஒ.png",
+  "audio": "/audio/ஒ.webm",
+  "peculiarities": "ஒ is the short 'o': round and quick, like the 'o' at the start of 'okay', clipped short. Round your lips and let it go.\n\nThe shape is a curl that opens and then drops a small tail. Our snake circles once and flicks its tail down.",
+  "vallalar_note": null,
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ஓ",
+    "ஔ",
+    "உ"
+  ]
+}

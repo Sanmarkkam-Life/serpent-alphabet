@@ -1,0 +1,18 @@
+{
+  "id": "uu",
+  "order": 6,
+  "glyph": "ஊ",
+  "phonetic": "Uuh!",
+  "image": "/letters/ஊ.png",
+  "audio": "/audio/ஊ.webm",
+  "peculiarities": "ஊ is உ held longer: the 'oo' in 'moon'. Say Uh! and keep it going, and you have Uuh!. Another short and long pair for your ear to collect.\n\nThe shape begins like உ and then loops once more below. Our snake takes the same path and adds one extra coil before resting.",
+  "vallalar_note": null,
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "உ",
+    "ஓ",
+    "ஈ"
+  ]
+}
