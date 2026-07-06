@@ -50,9 +50,6 @@ export default function HomePage() {
         <HomePath lessons={lessons} />
       </section>
 
-      <footer className="mt-auto pt-12 text-center font-ui text-xs text-sage-500">
-        Made by Sanmarkkam Life
-      </footer>
     </main>
   );
 }

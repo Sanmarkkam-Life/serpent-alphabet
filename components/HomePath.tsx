@@ -136,8 +136,8 @@ function LessonNode({
         {circle}
         {label}
         <span className="sr-only">
-          Lesson {lesson.order}, {lesson.phonetic}. Locked: finish the earlier
-          letters to open it.
+          Lesson {lesson.order}, {lesson.phonetic}. Locked: finish the step
+          before it to open it.
         </span>
       </div>
     );
@@ -155,6 +155,47 @@ function LessonNode({
     >
       {circle}
       {label}
+    </Link>
+  );
+}
+
+/**
+ * "The Soul Letters" intro node: a gold wisdom node at the very top of the
+ * path, before the first letter. Always tappable; viewing it unlocks
+ * lesson 1.
+ */
+function IntroNode({ viewed }: { viewed: boolean }) {
+  return (
+    <Link
+      href="/intro"
+      className="flex w-32 flex-col items-center"
+      aria-label={
+        viewed
+          ? "The Soul Letters. Read again."
+          : "The Soul Letters. Start here to open the first letter."
+      }
+    >
+      <span
+        className={`relative flex h-[84px] w-[84px] items-center justify-center rounded-full border-2 border-wisdom bg-wisdom-soft text-4xl shadow-leaf transition-transform active:scale-95 ${
+          viewed ? "" : "animate-wiggle"
+        }`}
+      >
+        <span aria-hidden="true">🪔</span>
+        {viewed && (
+          <span
+            className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full bg-wisdom font-ui text-sm font-bold text-white ring-2 ring-cream"
+            aria-hidden="true"
+          >
+            ✓
+          </span>
+        )}
+      </span>
+      <span
+        className="mt-1.5 text-center font-ui text-sm font-bold text-wisdom-deep"
+        aria-hidden="true"
+      >
+        The Soul Letters
+      </span>
     </Link>
   );
 }
@@ -180,7 +221,9 @@ export default function HomePath({ lessons }: HomePathProps) {
     return "locked";
   }
 
-  const tailSlot = slotAt(lessons.length);
+  // The intro node occupies slot 0; every lesson shifts one slot down.
+  const introSlot = slotAt(0);
+  const tailSlot = slotAt(lessons.length + 1);
 
   return (
     <div className="relative">
@@ -214,11 +257,21 @@ export default function HomePath({ lessons }: HomePathProps) {
           <span aria-hidden="true">{progress.mute ? "🔇" : "🔉"}</span>
         </button>
       </div>
+      {/* The Soul Letters intro leads the trail. */}
+      <div className="relative h-[116px]">
+        <div
+          className="absolute top-0 -translate-x-1/2"
+          style={{ left: `${SLOT_FRACTION[introSlot] * 100}%` }}
+        >
+          <IntroNode viewed={progress.introViewed} />
+        </div>
+      </div>
+
       {lessons.map((lesson, index) => {
-        const slot = slotAt(index);
+        const slot = slotAt(index + 1);
         return (
           <div key={lesson.id}>
-            {index > 0 && <Connector from={slotAt(index - 1)} to={slot} />}
+            <Connector from={slotAt(index)} to={slot} />
             <div className="relative h-[116px]">
               <div
                 className="absolute top-0 -translate-x-1/2"
@@ -234,7 +287,7 @@ export default function HomePath({ lessons }: HomePathProps) {
       {/* The trail keeps going: more letters are hatching. */}
       {lessons.length > 0 && (
         <div>
-          <Connector from={slotAt(lessons.length - 1)} to={tailSlot} />
+          <Connector from={slotAt(lessons.length)} to={tailSlot} />
           <div className="relative h-[124px]">
             <div
               className="absolute top-0 flex w-36 -translate-x-1/2 flex-col items-center"
