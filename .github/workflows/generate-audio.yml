@@ -1,0 +1,64 @@
+name: Generate Audio
+
+on:
+  workflow_dispatch:
+    inputs:
+      voice_id:
+        description: "ElevenLabs voice ID (run script with no args locally to list voices)"
+        required: true
+        type: string
+      letters:
+        description: "Comma-separated glyphs to generate (leave empty for all)"
+        required: false
+        type: string
+      force:
+        description: "Force regenerate existing files"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: generate-audio
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Generate pronunciations
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          # Inputs passed via env (not interpolated into the shell) to avoid
+          # any command injection through the free-text fields.
+          INPUT_VOICE_ID: ${{ inputs.voice_id }}
+          INPUT_LETTERS: ${{ inputs.letters }}
+          INPUT_FORCE: ${{ inputs.force }}
+        run: |
+          ARGS="--voice-id=$INPUT_VOICE_ID"
+          if [ -n "$INPUT_LETTERS" ]; then
+            ARGS="$ARGS --only=$INPUT_LETTERS"
+          fi
+          if [ "$INPUT_FORCE" = "true" ]; then
+            ARGS="$ARGS --force"
+          fi
+          node scripts/generate-audio.mjs $ARGS
