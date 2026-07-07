@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Lesson, NormalizedPoint } from "./types";
+import { normalizeTracePath } from "./trace";
+import type { Lesson } from "./types";
 
 /**
  * Server-side lesson loader. Reads every *.json in /content/lessons/ and
@@ -11,15 +12,6 @@ import type { Lesson, NormalizedPoint } from "./types";
  */
 
 const LESSONS_DIR = path.join(process.cwd(), "content", "lessons");
-
-function isNormalizedPoint(value: unknown): value is NormalizedPoint {
-  return (
-    Array.isArray(value) &&
-    value.length === 2 &&
-    typeof value[0] === "number" &&
-    typeof value[1] === "number"
-  );
-}
 
 /** Validate the shape loudly at build time so a bad JSON fails fast. */
 function parseLesson(raw: unknown, file: string): Lesson {
@@ -60,9 +52,9 @@ function parseLesson(raw: unknown, file: string): Lesson {
           ? obj.vallalar_note
           : (problems.push('"vallalar_note" must be a string or null'), null),
     audio: str("audio"),
-    trace_path: Array.isArray(obj.trace_path)
-      ? obj.trace_path.filter(isNormalizedPoint)
-      : (problems.push('"trace_path" must be an array of [x, y] pairs'), []),
+    // Accepts the legacy flat form and the new multi-stroke form; both are
+    // normalized to NormalizedPoint[][]. A missing/garbage path yields [].
+    trace_path: normalizeTracePath(obj.trace_path),
     trace_time_limit: num("trace_time_limit"),
     trace_tolerance: num("trace_tolerance"),
     distractors:

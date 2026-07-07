@@ -1,14 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
   addFingerPoint,
+  addFingerPointMulti,
+  countStrokePoints,
   coveredFraction,
+  createMultiStrokeSession,
   createTraceSession,
   evaluateLift,
   isAutoComplete,
+  liftStrokeMulti,
+  multiCoveredFraction,
   normalizePath,
+  normalizeTracePath,
   resamplePath,
   scaleTolerance,
   simplifyNormalizedPath,
+  type MultiStrokeSession,
   type TraceSession,
 } from "./trace";
 import type { NormalizedPoint } from "./types";
@@ -138,6 +145,162 @@ describe("trace session", () => {
     expect(isAutoComplete(s)).toBe(false);
     const after = addFingerPoint(s, 10, 10);
     expect(after.failure).toBeNull();
+  });
+});
+
+describe("normalizeTracePath", () => {
+  it("wraps a legacy flat path as a single stroke", () => {
+    const flat: NormalizedPoint[] = [
+      [0.1, 0.2],
+      [0.3, 0.4],
+    ];
+    expect(normalizeTracePath(flat)).toEqual([flat]);
+  });
+
+  it("passes a multi-stroke path through", () => {
+    const multi = [
+      [
+        [0.1, 0.2],
+        [0.3, 0.4],
+      ],
+      [
+        [0.5, 0.6],
+        [0.7, 0.8],
+      ],
+    ];
+    expect(normalizeTracePath(multi)).toEqual(multi);
+  });
+
+  it("returns [] for empty or garbage input", () => {
+    expect(normalizeTracePath([])).toEqual([]);
+    expect(normalizeTracePath(null)).toEqual([]);
+    expect(normalizeTracePath("nope")).toEqual([]);
+    expect(normalizeTracePath(undefined)).toEqual([]);
+  });
+
+  it("drops malformed points and empty strokes", () => {
+    expect(
+      normalizeTracePath([
+        [0.1, 0.2],
+        [0.3, "x"],
+        [0.5, 0.6],
+      ]),
+    ).toEqual([
+      [
+        [0.1, 0.2],
+        [0.5, 0.6],
+      ],
+    ]);
+    expect(
+      normalizeTracePath([
+        [
+          [0.1, 0.2],
+          [0.3, 0.4],
+        ],
+        [],
+        [[0.5, 0.6]],
+      ]),
+    ).toEqual([
+      [
+        [0.1, 0.2],
+        [0.3, 0.4],
+      ],
+      [[0.5, 0.6]],
+    ]);
+  });
+
+  it("counts points across strokes", () => {
+    expect(
+      countStrokePoints([
+        [
+          [0, 0],
+          [1, 1],
+        ],
+        [[2, 2]],
+      ]),
+    ).toBe(3);
+  });
+});
+
+describe("multi-stroke session", () => {
+  const STROKE_A: NormalizedPoint[] = [
+    [0.1, 0.3],
+    [0.9, 0.3],
+  ];
+  const STROKE_B: NormalizedPoint[] = [
+    [0.1, 0.7],
+    [0.9, 0.7],
+  ];
+
+  function drag(
+    session: MultiStrokeSession,
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+    steps = 40,
+  ): MultiStrokeSession {
+    let s = session;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      s = addFingerPointMulti(
+        s,
+        from.x + (to.x - from.x) * t,
+        from.y + (to.y - from.y) * t,
+      );
+      if (s.failure) break;
+    }
+    return s;
+  }
+
+  it("advances stroke by stroke, completing on the last lift", () => {
+    let s = createMultiStrokeSession([STROKE_A, STROKE_B], W, H, 40);
+    expect(s.done).toBe(false);
+    expect(s.current).toBe(0);
+
+    // Trace stroke A, lift -> advances to stroke B.
+    s = drag(s, { x: 0.1 * W, y: 0.3 * H }, { x: 0.9 * W, y: 0.3 * H });
+    expect(s.failure).toBeNull();
+    const liftA = liftStrokeMulti(s);
+    expect(liftA.advanced).toBe(true);
+    expect(liftA.session.current).toBe(1);
+    expect(liftA.session.done).toBe(false);
+
+    // Trace stroke B, lift -> done.
+    s = drag(liftA.session, { x: 0.1 * W, y: 0.7 * H }, { x: 0.9 * W, y: 0.7 * H });
+    const liftB = liftStrokeMulti(s);
+    expect(liftB.advanced).toBe(false);
+    expect(liftB.session.done).toBe(true);
+    expect(liftB.session.failure).toBeNull();
+  });
+
+  it("fails the whole trace if a stroke lifts with too little coverage", () => {
+    let s = createMultiStrokeSession([STROKE_A, STROKE_B], W, H, 40);
+    // Only trace the first third of stroke A, then lift.
+    s = drag(s, { x: 0.1 * W, y: 0.3 * H }, { x: 0.35 * W, y: 0.3 * H });
+    const lift = liftStrokeMulti(s);
+    expect(lift.advanced).toBe(false);
+    expect(lift.session.failure).toBe("coverage");
+  });
+
+  it("fails on a corridor breach mid-stroke", () => {
+    let s = createMultiStrokeSession([STROKE_A, STROKE_B], W, H, 40);
+    s = addFingerPointMulti(s, 0.1 * W, 0.3 * H);
+    s = addFingerPointMulti(s, 0.4 * W, 0.3 * H - 150); // far above the line
+    expect(s.failure).toBe("corridor");
+  });
+
+  it("auto-completes a single-stroke path without a lift", () => {
+    let s = createMultiStrokeSession([STROKE_A], W, H, 40);
+    s = drag(s, { x: 0.1 * W, y: 0.3 * H }, { x: 0.9 * W, y: 0.3 * H });
+    expect(s.done).toBe(true); // last (only) stroke auto-completes
+  });
+
+  it("aggregates coverage across strokes", () => {
+    const s = createMultiStrokeSession([STROKE_A, STROKE_B], W, H, 40);
+    expect(multiCoveredFraction(s)).toBe(0);
+    const traced = drag(s, { x: 0.1 * W, y: 0.3 * H }, { x: 0.9 * W, y: 0.3 * H });
+    // Stroke A fully covered, B untouched: about half overall.
+    expect(multiCoveredFraction(traced)).toBeGreaterThan(0.35);
+    expect(multiCoveredFraction(traced)).toBeLessThan(0.65);
   });
 });
 

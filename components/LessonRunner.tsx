@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Celebration, { type LessonSummary } from "@/components/Celebration";
 import LearnTask from "@/components/LearnTask";
 import PronounceTask from "@/components/PronounceTask";
@@ -21,12 +21,15 @@ import {
 import { levelUpBetween } from "@/lib/levels";
 import {
   addXp,
+  bumpFlawlessStreak,
   isLessonComplete,
   loadProgress,
   markLessonComplete,
   recordTaskActivity,
+  resetFlawlessStreak,
   setMute,
 } from "@/lib/progress";
+import { getStreakMultiplier } from "@/lib/streak";
 import { feedbackFail, feedbackFanfare, feedbackPass } from "@/lib/sfx";
 import {
   COMBO_START,
@@ -106,6 +109,11 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
   const [summary, setSummary] = useState<LessonSummary | null>(null);
   const [muted, setMuted] = useState(false);
 
+  // Global flawless streak (persistent across lessons/sessions).
+  const [flawlessStreak, setFlawlessStreak] = useState(0);
+  const [streakResetFlash, setStreakResetFlash] = useState(false);
+  const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Test-out state
   const [testOutAllowed, setTestOutAllowed] = useState(false);
   const [testOutStep, setTestOutStep] = useState<TestOutStep>("trace");
@@ -121,6 +129,7 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
     setMode(completed ? "review" : "normal");
     setXpAtStart(progress.xp);
     setMuted(progress.mute);
+    setFlawlessStreak(progress.flawlessStreak);
     let dismissed = false;
     try {
       dismissed =
@@ -140,16 +149,67 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
       ? Math.min(1, Math.max(0, 1 - remaining / maxRemaining))
       : 1;
 
-  const finishLesson = (finalXp: TaskXp, finalBestCombo: number): void => {
-    if (mode === "normal") markLessonComplete(lesson.id);
+  // Flawless streak helpers: bump on a clean pass, break on any mistake.
+  const bumpStreak = (): number => {
+    const next = bumpFlawlessStreak();
+    setFlawlessStreak(next.flawlessStreak);
+    return next.flawlessStreak;
+  };
+
+  const breakStreak = (): void => {
+    resetFlawlessStreak();
+    setFlawlessStreak(0);
+    setStreakResetFlash(true);
+    if (flashTimeoutRef.current !== null) clearTimeout(flashTimeoutRef.current);
+    flashTimeoutRef.current = setTimeout(() => setStreakResetFlash(false), 900);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (flashTimeoutRef.current !== null) clearTimeout(flashTimeoutRef.current);
+    };
+  }, []);
+
+  /**
+   * Apply the flawless-streak multiplier to the lesson total, bank the bonus
+   * XP, and build the celebration summary.
+   */
+  const summarize = (
+    finalXp: TaskXp,
+    finalBestCombo: number,
+    streakForBonus: number,
+    flavor: LessonSummary["flavor"],
+  ): LessonSummary => {
+    const streakMultiplier = getStreakMultiplier(streakForBonus);
+    const bonus = Math.round(finalXp.total * (streakMultiplier - 1));
+    if (bonus > 0) addXp(bonus);
     const totalAfter = loadProgress().xp;
-    feedbackFanfare();
-    setSummary({
+    return {
       xp: finalXp,
       bestCombo: finalBestCombo,
       levelUp: levelUpBetween(xpAtStart, totalAfter),
-      flavor: mode === "review" ? "review" : "normal",
-    });
+      flavor,
+      streakMultiplier,
+      flawlessStreak: streakForBonus,
+      finalTotal: finalXp.total + bonus,
+    };
+  };
+
+  const finishLesson = (
+    finalXp: TaskXp,
+    finalBestCombo: number,
+    streakForBonus: number,
+  ): void => {
+    if (mode === "normal") markLessonComplete(lesson.id);
+    feedbackFanfare();
+    setSummary(
+      summarize(
+        finalXp,
+        finalBestCombo,
+        streakForBonus,
+        mode === "review" ? "review" : "normal",
+      ),
+    );
     setView("celebrate");
   };
 
@@ -175,6 +235,9 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
     const bestComboNext = Math.max(bestCombo, comboNext);
     setBestCombo(bestComboNext);
 
+    // Every clean pass grows the persistent flawless streak.
+    const streakNext = bumpStreak();
+
     recordTaskActivity();
     feedbackPass();
 
@@ -183,7 +246,7 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
     setAttempt((count) => count + 1);
     setMaxRemaining((max) => Math.max(max, remainingPasses(next)));
     if (isComplete(next)) {
-      finishLesson(lessonXpNext, bestComboNext);
+      finishLesson(lessonXpNext, bestComboNext, streakNext);
     }
   };
 
@@ -191,6 +254,7 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
     if (view !== "task" || isComplete(queueState)) return;
     setFailedType(currentTask(queueState)?.type ?? null);
     setCombo(comboAfterFail());
+    breakStreak();
     feedbackFail();
     const next = failCurrent(queueState);
     setQueueState(next);
@@ -223,6 +287,7 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
     if (view !== "testout") return;
     feedbackPass();
     recordTaskActivity();
+    const streakNext = bumpStreak();
     if (step === "trace") {
       setTestOutTraceElapsed(elapsedSeconds ?? null);
       setTestOutStep("recognize");
@@ -237,19 +302,14 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
     addXp(earned.total);
     setLessonXp(earned);
     markLessonComplete(lesson.id);
-    const totalAfter = loadProgress().xp;
     feedbackFanfare();
-    setSummary({
-      xp: earned,
-      bestCombo: TEST_OUT_COMBO,
-      levelUp: levelUpBetween(xpAtStart, totalAfter),
-      flavor: "testout",
-    });
+    setSummary(summarize(earned, TEST_OUT_COMBO, streakNext, "testout"));
     setView("celebrate");
   };
 
   const handleTestOutFail = (): void => {
     if (view !== "testout") return;
+    breakStreak();
     feedbackFail();
     dismissTestOut();
     setView("testout-miss");
@@ -349,13 +409,29 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
           />
         </div>
 
+        {/* Flawless streak: always visible while it is running (⚡ N). It
+            flashes red at 0 on a mistake, then hides. */}
+        {(flawlessStreak >= 1 || streakResetFlash) && (
+          <span
+            key={`streak-${streakResetFlash ? "reset" : flawlessStreak}`}
+            className={`animate-pop-in whitespace-nowrap rounded-full px-2.5 py-1 font-ui text-sm font-extrabold ${
+              streakResetFlash
+                ? "bg-red-100 text-red-600"
+                : "bg-serpent-soft text-forest-deep"
+            }`}
+            aria-label={`Flawless streak: ${streakResetFlash ? 0 : flawlessStreak}`}
+          >
+            ⚡ {streakResetFlash ? 0 : flawlessStreak}
+          </span>
+        )}
+
         {/* Live lesson XP; remounts on change for a subtle pulse. */}
         <span
           key={lessonXp.total}
           className="animate-pop-in whitespace-nowrap rounded-full bg-sage-100 px-2.5 py-1 font-ui text-sm font-extrabold text-forest"
           aria-label={`${lessonXp.total} XP earned this lesson`}
         >
-          ⚡ {lessonXp.total}
+          {lessonXp.total} XP
         </span>
 
         <button

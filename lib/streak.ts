@@ -1,13 +1,31 @@
 /**
- * Daily streak: consecutive calendar days (device local time) with at
- * least one task passed. Pure calendar math on "YYYY-MM-DD" strings; the
- * device's local date enters only through `localDateString(new Date())`.
- * No notifications, no guilt. It's just quietly there.
+ * Streaks.
+ *
+ * Daily streak: consecutive calendar days (device local time) with at least
+ * one task passed. Pure calendar math on "YYYY-MM-DD" strings.
+ *
+ * Flawless streak: a global, persistent count of consecutive flawless task
+ * passes across the whole app. It increments on every clean pass and resets
+ * to 0 on any mistake. Unlike the per-lesson combo, it survives across
+ * lessons and sessions (stored in progress). At lesson end it multiplies the
+ * lesson's total XP via getStreakMultiplier.
  */
 
 export interface StreakInfo {
   lastActiveDate: string | null;
   streakCount: number;
+}
+
+/**
+ * Flawless-streak XP multiplier (tunable). No bonus below 5, then it ramps:
+ * 5 -> 1.1x, 10 -> 1.2x, 20 -> 1.5x, 50+ -> 2.0x.
+ */
+export function getStreakMultiplier(streak: number): number {
+  if (streak < 5) return 1.0;
+  if (streak < 10) return 1.1;
+  if (streak < 20) return 1.2;
+  if (streak < 50) return 1.5;
+  return 2.0;
 }
 
 /** Format a Date as YYYY-MM-DD in the device's local time zone. */

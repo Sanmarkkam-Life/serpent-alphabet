@@ -11,22 +11,24 @@ import {
 import type { Lesson } from "@/lib/types";
 import {
   TRACE_CANVAS_ASPECT,
-  addFingerPoint,
-  coveredFraction,
-  createTraceSession,
-  evaluateLift,
-  isAutoComplete,
+  addFingerPointMulti,
+  createMultiStrokeSession,
+  liftStrokeMulti,
+  multiCoveredFraction,
   resamplePath,
   scaleTolerance,
   toPixelPath,
+  type MultiStrokeSession,
   type PixelPoint,
   type TraceSession,
 } from "@/lib/trace";
 import { Button, Card } from "@/components/ui";
 
 /**
- * TraceTask — the learner traces the letter along the snake's path in one
- * stroke, inside a forgiving corridor, before a gentle timer runs out.
+ * TraceTask — the learner traces the letter along the snake's path, inside a
+ * forgiving corridor, before a gentle timer runs out. Letters may have
+ * several strokes: the learner lifts between them and each reference stroke
+ * is validated in turn.
  *
  * ALL validation math lives in lib/trace.ts; this component only feeds
  * pointer samples in and draws what the session reports back.
@@ -74,7 +76,6 @@ function strokePolyline(
   ctx.beginPath();
   ctx.moveTo(points[0].x, points[0].y);
   if (points.length === 1) {
-    // A zero-length subpath with round caps still renders a dot.
     ctx.lineTo(points[0].x + 0.01, points[0].y);
   }
   for (let i = 1; i < points.length; i++) {
@@ -83,10 +84,7 @@ function strokePolyline(
   ctx.stroke();
 }
 
-/**
- * Draw the covered portion of the guide: runs of consecutive covered indices
- * as 10px round-capped segments, isolated covered points as round dots.
- */
+/** Draw the covered portion of one stroke's guide in snake orange. */
 function drawCoveredGuide(
   ctx: CanvasRenderingContext2D,
   session: TraceSession,
@@ -128,9 +126,9 @@ function drawStartMarker(
   canvasWidth: number,
   canvasHeight: number,
 ): void {
+  if (guidePolyline.length === 0) return;
   const start = guidePolyline[0];
 
-  // Initial direction from a densely resampled copy (~24px along the path).
   const dense = resamplePath(guidePolyline);
   const ahead = dense[Math.min(6, dense.length - 1)];
   const dx = ahead.x - start.x;
@@ -139,7 +137,6 @@ function drawStartMarker(
   const ux = len > 0 ? dx / len : 1;
   const uy = len > 0 ? dy / len : 0;
 
-  // Small arrowhead a little way along the initial direction.
   if (len > 0) {
     const tipX = start.x + ux * 34;
     const tipY = start.y + uy * 34;
@@ -156,7 +153,6 @@ function drawStartMarker(
     ctx.fill();
   }
 
-  // Filled forest circle with a tiny cream center.
   ctx.fillStyle = MARKER_COLOR;
   ctx.beginPath();
   ctx.arc(start.x, start.y, 11, 0, Math.PI * 2);
@@ -166,7 +162,6 @@ function drawStartMarker(
   ctx.arc(start.x, start.y, 4, 0, Math.PI * 2);
   ctx.fill();
 
-  // Tiny "start" label, kept inside the canvas.
   ctx.fillStyle = MARKER_COLOR;
   ctx.font = "700 12px Nunito, system-ui, sans-serif";
   ctx.textAlign = "center";
@@ -186,14 +181,18 @@ export default function TraceTask({
   onFail,
   isRedeeming,
 }: TaskComponentProps) {
-  const hasPath = lesson.trace_path.length > 0;
+  const strokeCount = lesson.trace_path.length;
+  const hasPath = strokeCount > 0;
+  const multiStroke = strokeCount > 1;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fillRef = useRef<HTMLDivElement | null>(null);
 
   const sizeRef = useRef<CanvasSize | null>(null);
-  const sessionRef = useRef<TraceSession | null>(null);
+  const msRef = useRef<MultiStrokeSession | null>(null);
+  /** True once the first stroke of this attempt has begun. */
+  const startedRef = useRef(false);
   const trailRef = useRef<PixelPoint[]>([]);
   /** Set the instant pass/fail is decided — freezes ALL input and timers. */
   const finishedRef = useRef(false);
@@ -209,6 +208,7 @@ export default function TraceTask({
   const [size, setSize] = useState<CanvasSize | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [coveragePct, setCoveragePct] = useState(0);
+  const [strokeIndex, setStrokeIndex] = useState(0);
 
   const onPassRef = useRef(onPass);
   const onFailRef = useRef(onFail);
@@ -247,34 +247,37 @@ export default function TraceTask({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    const guide = toPixelPath(lesson.trace_path, w, h);
-    if (guide.length === 0) return;
+    const strokesPx = lesson.trace_path.map((stroke) =>
+      toPixelPath(stroke, w, h),
+    );
+    if (strokesPx.length === 0) return;
 
-    // 1. Faint guide corridor at the full validated width.
     const corridorWidth = 2 * scaleTolerance(lesson.trace_tolerance, w);
-    strokePolyline(ctx, guide, CORRIDOR_COLOR, corridorWidth);
+    // 1. Faint corridor for every stroke.
+    for (const gp of strokesPx) strokePolyline(ctx, gp, CORRIDOR_COLOR, corridorWidth);
+    // 2. Thinner center line so the shape is readable.
+    for (const gp of strokesPx) strokePolyline(ctx, gp, CENTER_LINE_COLOR, 6);
 
-    // 2. Thinner center line so the letter shape is readable.
-    strokePolyline(ctx, guide, CENTER_LINE_COLOR, 6);
-
-    // 3. Progress: covered points in snake orange (whole guide on success).
+    // 3. Progress: covered points in snake orange (whole letter on success).
     if (phaseRef.current === "success") {
       ctx.save();
       ctx.shadowColor = "rgba(245, 169, 75, 0.9)";
       ctx.shadowBlur = 18;
-      strokePolyline(ctx, guide, COVERED_COLOR, 10);
+      for (const gp of strokesPx) strokePolyline(ctx, gp, COVERED_COLOR, 10);
       ctx.restore();
-    } else if (sessionRef.current) {
-      drawCoveredGuide(ctx, sessionRef.current);
+    } else if (msRef.current) {
+      for (const s of msRef.current.strokes) drawCoveredGuide(ctx, s);
     }
 
-    // 4. The learner's raw finger trail this attempt.
+    // 4. The learner's raw finger trail for the current stroke.
     if (phaseRef.current !== "success" && trailRef.current.length > 1) {
       strokePolyline(ctx, trailRef.current, TRAIL_COLOR, 3);
     }
 
-    // 5. Start marker on top (hidden once the whole guide lights up).
+    // 5. Start marker on the CURRENT stroke (hidden on success).
     if (phaseRef.current !== "success") {
+      const idx = msRef.current ? msRef.current.current : 0;
+      const guide = strokesPx[idx] ?? strokesPx[0];
       drawStartMarker(ctx, guide, w, h);
     }
   }, [lesson.trace_path, lesson.trace_tolerance]);
@@ -341,21 +344,21 @@ export default function TraceTask({
     rafRef.current = requestAnimationFrame(tick);
   }, [finish, lesson.trace_time_limit]);
 
-  /** Store the updated session, then act on what lib/trace decided. */
-  const applySession = useCallback(
-    (next: TraceSession) => {
-      sessionRef.current = next;
-      const pct = Math.round(coveredFraction(next) * 100);
+  /** Store the updated multi-stroke session, then act on what it decided. */
+  const applyMulti = useCallback(
+    (next: MultiStrokeSession) => {
+      msRef.current = next;
+      const pct = Math.round(multiCoveredFraction(next) * 100);
       if (pct !== coveragePctRef.current && !finishedRef.current) {
         coveragePctRef.current = pct;
         setCoveragePct(pct);
       }
-      if (next.failure === "corridor") {
+      if (next.failure !== null) {
         finish("fail");
         return;
       }
-      if (isAutoComplete(next)) {
-        finish("pass"); // no lift needed
+      if (next.done) {
+        finish("pass"); // last stroke auto-completed without a lift
         return;
       }
       draw();
@@ -388,37 +391,42 @@ export default function TraceTask({
     }
     activePointerRef.current = e.pointerId;
 
-    // Fresh session every touch-down; first touch starts the clock.
-    const fresh = createTraceSession(
-      lesson.trace_path,
-      cssSize.w,
-      cssSize.h,
-      lesson.trace_tolerance,
-    );
-    trailRef.current = [];
-    coveragePctRef.current = 0;
-    setCoveragePct(0);
-    phaseRef.current = "tracing";
-    setPhase("tracing");
-    startTimer();
+    // First touch of the whole trace: create the session and start the clock.
+    if (!startedRef.current || !msRef.current) {
+      msRef.current = createMultiStrokeSession(
+        lesson.trace_path,
+        cssSize.w,
+        cssSize.h,
+        lesson.trace_tolerance,
+      );
+      startedRef.current = true;
+      coveragePctRef.current = 0;
+      setCoveragePct(0);
+      setStrokeIndex(0);
+      phaseRef.current = "tracing";
+      setPhase("tracing");
+      startTimer();
+    }
 
+    // Begin a (possibly new) stroke: reset the raw finger trail.
+    trailRef.current = [];
     const p = pointFromEvent(e);
     if (!p) return;
     trailRef.current.push(p);
-    applySession(addFingerPoint(fresh, p.x, p.y));
+    applyMulti(addFingerPointMulti(msRef.current, p.x, p.y));
   };
 
   const handlePointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     if (finishedRef.current) return;
     if (activePointerRef.current !== e.pointerId) return;
-    const session = sessionRef.current;
+    const session = msRef.current;
     if (!session) return; // no active session: ignore stray moves
     if (e.nativeEvent.cancelable) e.preventDefault();
 
     const p = pointFromEvent(e);
     if (!p) return;
     trailRef.current.push(p);
-    applySession(addFingerPoint(session, p.x, p.y));
+    applyMulti(addFingerPointMulti(session, p.x, p.y));
   };
 
   const handlePointerEnd = (e: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -426,10 +434,25 @@ export default function TraceTask({
     if (e.nativeEvent.cancelable) e.preventDefault();
     releaseActivePointer();
     if (finishedRef.current) return;
-    const session = sessionRef.current;
+    const session = msRef.current;
     if (!session) return;
-    const { passed } = evaluateLift(session);
-    finish(passed ? "pass" : "fail");
+
+    const { session: lifted, advanced } = liftStrokeMulti(session);
+    msRef.current = lifted;
+    if (lifted.failure !== null) {
+      finish("fail");
+      return;
+    }
+    if (lifted.done) {
+      finish("pass");
+      return;
+    }
+    if (advanced) {
+      // Move on to the next reference stroke: clear the trail, show its start.
+      trailRef.current = [];
+      setStrokeIndex(lifted.current);
+      draw();
+    }
   };
 
   // Measure the canvas box; all math runs in CSS pixels.
@@ -444,14 +467,15 @@ export default function TraceTask({
       if (w <= 0) return;
       const prev = sizeRef.current;
       if (prev && Math.abs(prev.w - w) < 0.5) return;
-      if (prev && sessionRef.current && !finishedRef.current) {
-        // A mid-trace resize invalidates the session's pixel space —
-        // quietly abandon the attempt (rare: device rotation).
-        sessionRef.current = null;
+      if (prev && startedRef.current && !finishedRef.current) {
+        // A mid-trace resize invalidates pixel space — abandon the attempt.
+        msRef.current = null;
+        startedRef.current = false;
         trailRef.current = [];
         releaseActivePointer();
         phaseRef.current = "idle";
         setPhase("idle");
+        setStrokeIndex(0);
       }
       const next: CanvasSize = { w, h: w / TRACE_CANVAS_ASPECT };
       sizeRef.current = next;
@@ -537,8 +561,15 @@ export default function TraceTask({
           Trace <span className="font-tamil">{lesson.glyph}</span>
         </h2>
         <p className="mt-1 font-ui text-sm text-forest-soft">
-          Start at the dot and follow the snake&apos;s path in one stroke.
+          {multiStroke
+            ? "Start at the dot and follow each stroke. Lift your finger between strokes."
+            : "Start at the dot and follow the snake's path in one stroke."}
         </p>
+        {multiStroke && (
+          <p className="mt-1 font-ui text-sm font-bold text-forest">
+            Stroke {Math.min(strokeIndex + 1, strokeCount)} of {strokeCount}
+          </p>
+        )}
       </div>
 
       <div
@@ -591,7 +622,7 @@ export default function TraceTask({
           ? `${coveragePct}% traced`
           : phase === "success"
             ? "Beautiful!"
-            : " "}
+            : " "}
       </p>
     </div>
   );

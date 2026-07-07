@@ -10,6 +10,7 @@ import {
 import type { Lesson, NormalizedPoint } from "@/lib/types";
 import {
   TRACE_CANVAS_ASPECT,
+  countStrokePoints,
   normalizePath,
   simplifyNormalizedPath,
   toPixelPath,
@@ -26,10 +27,11 @@ import TraceTask from "@/components/TraceTask";
 import { Button, Card } from "@/components/ui";
 
 /**
- * Author Studio — records normalized trace paths and reference audio for
- * lessons. Uses the exact same canvas geometry (TRACE_CANVAS_ASPECT, dpr
- * scaling) as the learner-facing trace screen, so a path recorded here lands
- * identically on every device.
+ * Author Studio — records normalized multi-stroke trace paths and reference
+ * audio for lessons. Uses the exact same canvas geometry (TRACE_CANVAS_ASPECT,
+ * dpr scaling) as the learner-facing trace screen, so a path recorded here
+ * lands identically on every device. Each lift-and-touch begins a new stroke,
+ * so multi-stroke letters (ஐ, ஔ, ...) can be authored naturally.
  */
 
 export interface AuthorStudioProps {
@@ -51,17 +53,17 @@ interface LessonStatus {
 /** Author password lives in sessionStorage only (never in the repo/bundle). */
 const PASSWORD_STORAGE_KEY = "serpent_author_password";
 
-const PREVIEW_DURATION_MS = 2000;
+const PREVIEW_DURATION_MS = 2200;
 const STROKE_COLOR = "#F5A94B"; // serpent
+const START_DOT_COLOR = "#2E5B3E"; // forest
 const GLYPH_COLOR = "rgba(46, 91, 62, 0.12)"; // faint forest
 const CANVAS_BG = "#FAF6EC"; // cream-soft
 const FALLBACK_FONT = '"Noto Sans Tamil", "Latha", system-ui, sans-serif';
 
 export default function AuthorStudio({ lessons }: AuthorStudioProps) {
   const [selectedId, setSelectedId] = useState<string>(lessons[0]?.id ?? "");
-  const [recordedPath, setRecordedPath] = useState<NormalizedPoint[] | null>(
-    null,
-  );
+  /** Committed strokes for the current recording (multi-stroke). */
+  const [strokes, setStrokes] = useState<NormalizedPoint[][]>([]);
   const [mode, setMode] = useState<StudioMode>("record");
   const [testOutcome, setTestOutcome] = useState<TestOutcome>(null);
   const [testKey, setTestKey] = useState(0);
@@ -103,6 +105,9 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
   const selectedLesson =
     lessons.find((lesson) => lesson.id === selectedId) ?? lessons[0] ?? null;
 
+  const recordedPointCount = countStrokePoints(strokes);
+  const hasRecording = strokes.length > 0;
+
   /* ---------------------------------------------------------------- */
   /* Canvas drawing                                                    */
   /* ---------------------------------------------------------------- */
@@ -127,8 +132,8 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
         ctx.lineTo(pts[i].x, pts[i].y);
       }
       ctx.stroke();
-      // Start marker so the stroke direction is obvious to the author.
-      ctx.fillStyle = "#2E5B3E";
+      // Start marker so each stroke's direction is obvious to the author.
+      ctx.fillStyle = START_DOT_COLOR;
       ctx.beginPath();
       ctx.arc(pts[0].x, pts[0].y, 5, 0, Math.PI * 2);
       ctx.fill();
@@ -136,8 +141,9 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
     [],
   );
 
-  const draw = useCallback(
-    (livePx?: readonly PixelPoint[]) => {
+  /** Draw the glyph background and a given set of pixel-space strokes. */
+  const drawScene = useCallback(
+    (strokesPx: ReadonlyArray<readonly PixelPoint[]>) => {
       const canvas = canvasRef.current;
       const { w, h, dpr } = sizeRef.current;
       if (!canvas || w === 0 || h === 0 || !selectedLesson) return;
@@ -161,12 +167,20 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
       ctx.fillStyle = GLYPH_COLOR;
       ctx.fillText(selectedLesson.glyph, w / 2, h / 2);
 
-      const pts =
-        livePx ?? (recordedPath ? toPixelPath(recordedPath, w, h) : null);
-      if (pts) strokePoints(ctx, pts);
+      for (const stroke of strokesPx) strokePoints(ctx, stroke);
     },
-    [selectedLesson, recordedPath, fontFamily, strokePoints],
+    [selectedLesson, fontFamily, strokePoints],
   );
+
+  const strokesToPx = useCallback((list: NormalizedPoint[][]): PixelPoint[][] => {
+    const { w, h } = sizeRef.current;
+    return list.map((s) => toPixelPath(s, w, h));
+  }, []);
+
+  /** Redraw the committed strokes (used outside an active gesture). */
+  const redraw = useCallback(() => {
+    drawScene(strokesToPx(strokes));
+  }, [drawScene, strokesToPx, strokes]);
 
   // Resolve the Tamil webfont for ctx.font, and redraw once fonts load.
   useEffect(() => {
@@ -214,12 +228,12 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
     return () => observer.disconnect();
   }, [mode]);
 
-  // Redraw whenever the scene inputs change (size, lesson, path, fonts).
-  // Skipped mid-gesture — pointer handlers own the canvas while drawing.
+  // Redraw when the scene inputs change. Skipped mid-gesture — pointer
+  // handlers own the canvas while drawing.
   useEffect(() => {
     if (mode !== "record" || isDrawingRef.current) return;
-    draw();
-  }, [draw, mode, canvasSize, fontsReady]);
+    redraw();
+  }, [redraw, mode, canvasSize, fontsReady]);
 
   const cancelPreview = useCallback(() => {
     if (rafRef.current !== null) {
@@ -229,7 +243,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
   }, []);
 
   /* ---------------------------------------------------------------- */
-  /* Pointer tracing (one continuous stroke)                           */
+  /* Pointer tracing (one stroke per lift; strokes accumulate)         */
   /* ---------------------------------------------------------------- */
 
   const pointFromEvent = (
@@ -244,14 +258,14 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
     e.currentTarget.setPointerCapture(e.pointerId);
     isDrawingRef.current = true;
     pointsRef.current = [pointFromEvent(e)];
-    setRecordedPath(null); // retracing replaces the previous stroke
-    draw(pointsRef.current);
+    // Draw the already-committed strokes plus this new in-progress one.
+    drawScene([...strokesToPx(strokes), pointsRef.current]);
   };
 
   const handlePointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!isDrawingRef.current) return;
     pointsRef.current.push(pointFromEvent(e));
-    draw(pointsRef.current);
+    drawScene([...strokesToPx(strokes), pointsRef.current]);
   };
 
   const handlePointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -264,24 +278,32 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
     );
     pointsRef.current = [];
     if (normalized.length >= 2) {
-      setRecordedPath(normalized);
+      // Append this stroke; the redraw effect repaints all committed strokes.
+      setStrokes((prev) => [...prev, normalized]);
     } else {
-      setRecordedPath(null);
-      draw();
+      // A stray tap: discard and repaint what we have.
+      redraw();
     }
   };
 
   const handlePointerCancel = () => {
     isDrawingRef.current = false;
     pointsRef.current = [];
-    draw();
+    redraw();
   };
 
-  const handleClear = () => {
+  const handleUndoStroke = () => {
     cancelPreview();
     pointsRef.current = [];
     isDrawingRef.current = false;
-    setRecordedPath(null);
+    setStrokes((prev) => prev.slice(0, -1));
+  };
+
+  const handleClearAll = () => {
+    cancelPreview();
+    pointsRef.current = [];
+    isDrawingRef.current = false;
+    setStrokes([]);
   };
 
   /* ---------------------------------------------------------------- */
@@ -289,16 +311,23 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
   /* ---------------------------------------------------------------- */
 
   const handlePreview = () => {
-    if (!recordedPath) return;
+    if (!hasRecording) return;
     cancelPreview();
-    const { w, h } = sizeRef.current;
-    const px = toPixelPath(recordedPath, w, h);
-    if (px.length < 2) return;
+    const strokePx = strokesToPx(strokes);
+    const totalPts = strokePx.reduce((n, s) => n + s.length, 0);
+    if (totalPts < 2) return;
     const start = performance.now();
     const step = (now: number) => {
       const t = Math.min(1, (now - start) / PREVIEW_DURATION_MS);
-      const count = Math.max(2, Math.ceil(px.length * t));
-      draw(px.slice(0, count));
+      let remaining = Math.max(1, Math.ceil(totalPts * t));
+      const revealed: PixelPoint[][] = [];
+      for (const s of strokePx) {
+        if (remaining <= 0) break;
+        const take = Math.min(s.length, remaining);
+        revealed.push(s.slice(0, take));
+        remaining -= take;
+      }
+      drawScene(revealed);
       if (t < 1) {
         rafRef.current = requestAnimationFrame(step);
       } else {
@@ -309,9 +338,9 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
   };
 
   const handleCopy = async () => {
-    if (!recordedPath) return;
+    if (!hasRecording) return;
     try {
-      await navigator.clipboard.writeText(JSON.stringify(recordedPath));
+      await navigator.clipboard.writeText(JSON.stringify(strokes));
       setCopied(true);
       if (copyTimerRef.current !== null) {
         window.clearTimeout(copyTimerRef.current);
@@ -324,7 +353,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
   };
 
   const handleTest = () => {
-    if (!recordedPath) return;
+    if (!hasRecording) return;
     cancelPreview();
     setTestOutcome(null);
     setTestKey((k) => k + 1);
@@ -336,7 +365,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
     pointsRef.current = [];
     isDrawingRef.current = false;
     setSelectedId(id);
-    setRecordedPath(null);
+    setStrokes([]);
     setTestOutcome(null);
     setMode("record");
   };
@@ -384,7 +413,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
   useEffect(() => {
     setSaveState("idle");
     setSaveMessage(null);
-  }, [recordedPath, selectedId]);
+  }, [strokes, selectedId]);
 
   const persistPassword = (pw: string) => {
     setAuthorPassword(pw);
@@ -397,7 +426,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
   };
 
   const handleSaveToGitHub = useCallback(async () => {
-    if (!recordedPath || !selectedLesson) return;
+    if (!hasRecording || !selectedLesson) return;
     if (!authorPassword) {
       setSaveMessage("Enter the author password first.");
       return;
@@ -410,7 +439,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: selectedLesson.id,
-          trace_path: recordedPath,
+          trace_path: strokes,
           password: authorPassword,
         }),
       });
@@ -431,14 +460,14 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
       }
       setSaveState("saved");
       setSaveMessage(
-        `Saved ✓ ${data.points ?? recordedPath.length} points. Live in ~1 min after redeploy.`,
+        `Saved ✓ ${data.points ?? recordedPointCount} points. Live in ~1 min after redeploy.`,
       );
       // Optimistic badge flip for the letter we just saved.
       setTraceStatus((prev) =>
         prev
           ? prev.map((l) =>
               l.id === selectedLesson.id
-                ? { ...l, hasTrace: true, points: recordedPath.length }
+                ? { ...l, hasTrace: true, points: recordedPointCount }
                 : l,
             )
           : prev,
@@ -448,7 +477,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
       setSaveState("error");
       let copiedOk = false;
       try {
-        await navigator.clipboard.writeText(JSON.stringify(recordedPath));
+        await navigator.clipboard.writeText(JSON.stringify(strokes));
         copiedOk = true;
       } catch {
         // clipboard may be blocked; the JSON textarea below is the last resort
@@ -460,7 +489,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
           : `${base} Copy the JSON below manually.`,
       );
     }
-  }, [recordedPath, selectedLesson, authorPassword]);
+  }, [strokes, hasRecording, recordedPointCount, selectedLesson, authorPassword]);
 
   const handleStartAudio = async () => {
     setAudioError(null);
@@ -537,17 +566,19 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
     );
   }
 
-  const existingCount = selectedLesson.trace_path.length;
+  const existingPointCount = countStrokePoints(selectedLesson.trace_path);
+  const existingStrokeCount = selectedLesson.trace_path.length;
 
-  if (mode === "test" && recordedPath) {
-    const testLesson: Lesson = { ...selectedLesson, trace_path: recordedPath };
+  if (mode === "test" && hasRecording) {
+    const testLesson: Lesson = { ...selectedLesson, trace_path: strokes };
     return (
       <div className="space-y-4">
         <Card>
           <p className="font-ui text-sm font-bold text-forest">
             Testing recorded path for{" "}
             <span className="font-tamil">{selectedLesson.glyph}</span> (
-            {selectedLesson.id}): {recordedPath.length} points
+            {selectedLesson.id}): {recordedPointCount} points in{" "}
+            {strokes.length} stroke{strokes.length === 1 ? "" : "s"}
           </p>
         </Card>
         {testOutcome === null ? (
@@ -588,11 +619,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
           </Card>
         )}
         {testOutcome === null && (
-          <Button
-            fullWidth
-            variant="ghost"
-            onClick={() => setMode("record")}
-          >
+          <Button fullWidth variant="ghost" onClick={() => setMode("record")}>
             Back to recording
           </Button>
         )}
@@ -614,9 +641,10 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
 
       <Card>
         <p className="font-ui text-sm text-forest">
-          Trace the letter with <strong>one continuous stroke</strong>, exactly
-          the way a learner should write it. If possible, record on a phone:
-          this canvas has the same geometry learners see.
+          Trace the letter the way a learner should write it. Lift your finger
+          to end a stroke; touch again to start the next one. Letters like ஐ
+          and ஔ need several strokes. Record on a phone if you can: this canvas
+          has the same geometry learners see.
         </p>
       </Card>
 
@@ -702,8 +730,8 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
           ))}
         </select>
         <p className="mt-1 font-ui text-xs text-forest-soft">
-          {existingCount > 0
-            ? `${existingCount} points recorded`
+          {existingPointCount > 0
+            ? `${existingPointCount} points in ${existingStrokeCount} stroke${existingStrokeCount === 1 ? "" : "s"} recorded`
             : "no trace path yet"}
         </p>
       </section>
@@ -720,18 +748,26 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
         />
         <div className="mt-2 flex items-center justify-between gap-3">
           <p className="font-ui text-sm text-forest">
-            {recordedPath
-              ? `Recorded: ${recordedPath.length} points`
+            {hasRecording
+              ? `${recordedPointCount} points · ${strokes.length} stroke${strokes.length === 1 ? "" : "s"}`
               : "No stroke recorded yet. Draw on the canvas."}
           </p>
-          <Button
-            variant="secondary"
-            onClick={handleClear}
-            disabled={!recordedPath}
-            className="shrink-0"
-          >
-            Clear
-          </Button>
+          <div className="flex shrink-0 gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleUndoStroke}
+              disabled={!hasRecording}
+            >
+              Undo stroke
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleClearAll}
+              disabled={!hasRecording}
+            >
+              Clear all
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -741,7 +777,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
           <Button
             variant="secondary"
             onClick={handlePreview}
-            disabled={!recordedPath}
+            disabled={!hasRecording}
             className="flex-1"
           >
             Preview
@@ -749,16 +785,12 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
           <Button
             variant="secondary"
             onClick={() => void handleCopy()}
-            disabled={!recordedPath}
+            disabled={!hasRecording}
             className="flex-1"
           >
             {copied ? "Copied!" : "Copy JSON"}
           </Button>
-          <Button
-            onClick={handleTest}
-            disabled={!recordedPath}
-            className="flex-1"
-          >
+          <Button onClick={handleTest} disabled={!hasRecording} className="flex-1">
             Test it
           </Button>
         </div>
@@ -770,7 +802,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
               <Button
                 fullWidth
                 onClick={() => void handleSaveToGitHub()}
-                disabled={!recordedPath || saveState === "saving"}
+                disabled={!hasRecording || saveState === "saving"}
               >
                 {saveState === "saving"
                   ? "Saving…"
@@ -831,7 +863,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
             </p>
           )}
         </div>
-        {recordedPath && (
+        {hasRecording && (
           <div>
             <label
               htmlFor="author-json-out"
@@ -843,7 +875,7 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
               id="author-json-out"
               readOnly
               rows={4}
-              value={JSON.stringify(recordedPath)}
+              value={JSON.stringify(strokes)}
               onFocus={(e) => e.currentTarget.select()}
               className="w-full rounded-xl border-2 border-sage-300 bg-cream-soft p-2 font-mono text-xs text-forest"
             />

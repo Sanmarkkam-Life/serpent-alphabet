@@ -159,12 +159,101 @@ function LessonNode({
   );
 }
 
+/** A gold wisdom badge (book / lamp) used by both intro nodes. */
+function IntroBadge({
+  icon,
+  viewed,
+  wiggle,
+  locked,
+}: {
+  icon: string;
+  viewed: boolean;
+  wiggle: boolean;
+  locked?: boolean;
+}) {
+  return (
+    <span
+      className={`relative flex h-[84px] w-[84px] items-center justify-center rounded-full border-2 text-4xl shadow-leaf transition-transform active:scale-95 ${
+        locked
+          ? "border-sage-300 bg-sage-100 opacity-60"
+          : "border-wisdom bg-wisdom-soft"
+      } ${wiggle ? "animate-wiggle" : ""}`}
+    >
+      <span aria-hidden="true">{icon}</span>
+      {viewed && (
+        <span
+          className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full bg-wisdom font-ui text-sm font-bold text-white ring-2 ring-cream"
+          aria-hidden="true"
+        >
+          ✓
+        </span>
+      )}
+      {locked && (
+        <span
+          className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-sage-100 text-xs ring-2 ring-cream"
+          aria-hidden="true"
+        >
+          🔒
+        </span>
+      )}
+    </span>
+  );
+}
+
+function IntroNodeLabel({ text }: { text: string }) {
+  return (
+    <span
+      className="mt-1.5 text-center font-ui text-sm font-bold text-wisdom-deep"
+      aria-hidden="true"
+    >
+      {text}
+    </span>
+  );
+}
+
 /**
- * "The Soul Letters" intro node: a gold wisdom node at the very top of the
- * path, before the first letter. Always tappable; viewing it unlocks
- * lesson 1.
+ * "About Tamil" intro node: leads the whole path, always tappable. Viewing
+ * it unlocks the Soul Letters intro.
  */
-function IntroNode({ viewed }: { viewed: boolean }) {
+function TamilIntroNode({ viewed }: { viewed: boolean }) {
+  return (
+    <Link
+      href="/about"
+      className="flex w-32 flex-col items-center"
+      aria-label={
+        viewed
+          ? "About Tamil. Read again."
+          : "About Tamil. Start here to begin the path."
+      }
+    >
+      <IntroBadge icon="📖" viewed={viewed} wiggle={!viewed} />
+      <IntroNodeLabel text="About Tamil" />
+    </Link>
+  );
+}
+
+/**
+ * "The Soul Letters" intro node. Locked until the Tamil intro is viewed;
+ * once unlocked it is tappable and viewing it unlocks the first lesson.
+ */
+function SoulLettersNode({
+  unlocked,
+  viewed,
+}: {
+  unlocked: boolean;
+  viewed: boolean;
+}) {
+  if (!unlocked) {
+    return (
+      <div className="flex w-32 flex-col items-center" aria-disabled="true">
+        <IntroBadge icon="🪔" viewed={false} wiggle={false} locked />
+        <IntroNodeLabel text="The Soul Letters" />
+        <span className="sr-only">
+          The Soul Letters. Locked: read About Tamil first.
+        </span>
+      </div>
+    );
+  }
   return (
     <Link
       href="/intro"
@@ -172,30 +261,11 @@ function IntroNode({ viewed }: { viewed: boolean }) {
       aria-label={
         viewed
           ? "The Soul Letters. Read again."
-          : "The Soul Letters. Start here to open the first letter."
+          : "The Soul Letters. Open the first letter."
       }
     >
-      <span
-        className={`relative flex h-[84px] w-[84px] items-center justify-center rounded-full border-2 border-wisdom bg-wisdom-soft text-4xl shadow-leaf transition-transform active:scale-95 ${
-          viewed ? "" : "animate-wiggle"
-        }`}
-      >
-        <span aria-hidden="true">🪔</span>
-        {viewed && (
-          <span
-            className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full bg-wisdom font-ui text-sm font-bold text-white ring-2 ring-cream"
-            aria-hidden="true"
-          >
-            ✓
-          </span>
-        )}
-      </span>
-      <span
-        className="mt-1.5 text-center font-ui text-sm font-bold text-wisdom-deep"
-        aria-hidden="true"
-      >
-        The Soul Letters
-      </span>
+      <IntroBadge icon="🪔" viewed={viewed} wiggle={!viewed} />
+      <IntroNodeLabel text="The Soul Letters" />
     </Link>
   );
 }
@@ -221,9 +291,10 @@ export default function HomePath({ lessons }: HomePathProps) {
     return "locked";
   }
 
-  // The intro node occupies slot 0; every lesson shifts one slot down.
-  const introSlot = slotAt(0);
-  const tailSlot = slotAt(lessons.length + 1);
+  // Two intro nodes lead the path (slots 0 and 1); lessons start at slot 2.
+  const tamilSlot = slotAt(0);
+  const soulSlot = slotAt(1);
+  const tailSlot = slotAt(lessons.length + 2);
 
   return (
     <div className="relative">
@@ -237,8 +308,16 @@ export default function HomePath({ lessons }: HomePathProps) {
           {level.name}
         </span>
         <span className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-3.5 py-2 font-ui text-sm font-extrabold text-forest">
-          ⚡ {progress.xp} XP
+          {progress.xp} XP
         </span>
+        {progress.flawlessStreak >= 1 && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full bg-serpent-soft px-3.5 py-2 font-ui text-sm font-extrabold text-forest-deep"
+            aria-label={`Flawless streak: ${progress.flawlessStreak}`}
+          >
+            ⚡ {progress.flawlessStreak}
+          </span>
+        )}
         {progress.streakCount >= 2 && (
           <span
             className="inline-flex items-center gap-1 rounded-full bg-serpent-soft px-3.5 py-2 font-ui text-sm font-extrabold text-forest-deep"
@@ -257,21 +336,35 @@ export default function HomePath({ lessons }: HomePathProps) {
           <span aria-hidden="true">{progress.mute ? "🔇" : "🔉"}</span>
         </button>
       </div>
-      {/* The Soul Letters intro leads the trail. */}
+      {/* The About Tamil intro leads the trail. */}
       <div className="relative h-[116px]">
         <div
           className="absolute top-0 -translate-x-1/2"
-          style={{ left: `${SLOT_FRACTION[introSlot] * 100}%` }}
+          style={{ left: `${SLOT_FRACTION[tamilSlot] * 100}%` }}
         >
-          <IntroNode viewed={progress.introViewed} />
+          <TamilIntroNode viewed={progress.tamilIntroViewed} />
+        </div>
+      </div>
+
+      {/* Then the Soul Letters intro (locked until About Tamil is viewed). */}
+      <Connector from={tamilSlot} to={soulSlot} />
+      <div className="relative h-[116px]">
+        <div
+          className="absolute top-0 -translate-x-1/2"
+          style={{ left: `${SLOT_FRACTION[soulSlot] * 100}%` }}
+        >
+          <SoulLettersNode
+            unlocked={progress.tamilIntroViewed}
+            viewed={progress.introViewed}
+          />
         </div>
       </div>
 
       {lessons.map((lesson, index) => {
-        const slot = slotAt(index + 1);
+        const slot = slotAt(index + 2);
         return (
           <div key={lesson.id}>
-            <Connector from={slotAt(index)} to={slot} />
+            <Connector from={slotAt(index + 1)} to={slot} />
             <div className="relative h-[116px]">
               <div
                 className="absolute top-0 -translate-x-1/2"
@@ -287,7 +380,7 @@ export default function HomePath({ lessons }: HomePathProps) {
       {/* The trail keeps going: more letters are hatching. */}
       {lessons.length > 0 && (
         <div>
-          <Connector from={slotAt(lessons.length)} to={tailSlot} />
+          <Connector from={slotAt(lessons.length + 1)} to={tailSlot} />
           <div className="relative h-[124px]">
             <div
               className="absolute top-0 flex w-36 -translate-x-1/2 flex-col items-center"

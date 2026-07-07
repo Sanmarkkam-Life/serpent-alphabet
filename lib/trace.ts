@@ -319,3 +319,158 @@ export function simplifyNormalizedPath(
 function round4(v: number): number {
   return Math.round(v * 10000) / 10000;
 }
+
+/* ------------------------------------------------------------------ */
+/* Multi-stroke paths                                                  */
+/* ------------------------------------------------------------------ */
+
+/** One continuous stroke of normalized points. */
+export type TraceStroke = NormalizedPoint[];
+/** A full letter as an ordered list of strokes. */
+export type TraceStrokes = NormalizedPoint[][];
+
+function isFinitePoint(v: unknown): v is NormalizedPoint {
+  return (
+    Array.isArray(v) &&
+    v.length === 2 &&
+    typeof v[0] === "number" &&
+    typeof v[1] === "number" &&
+    Number.isFinite(v[0]) &&
+    Number.isFinite(v[1])
+  );
+}
+
+/**
+ * Normalize any stored trace_path to the multi-stroke format
+ * `NormalizedPoint[][]`, tolerating both the legacy flat single-stroke form
+ * `[[x,y],...]` and the new nested form `[[[x,y],...],...]`.
+ *
+ * Detection: an empty array is no strokes; if the first element is itself a
+ * `[number, number]` pair the whole array is one stroke; otherwise each
+ * element is treated as a stroke. Empty strokes and malformed points are
+ * dropped so downstream code always gets clean geometry.
+ */
+export function normalizeTracePath(path: unknown): TraceStrokes {
+  if (!Array.isArray(path) || path.length === 0) return [];
+  const first = path[0];
+  // Flat single-stroke: first element is a numeric pair.
+  if (
+    Array.isArray(first) &&
+    first.length === 2 &&
+    typeof first[0] === "number"
+  ) {
+    const stroke = (path as unknown[]).filter(isFinitePoint);
+    return stroke.length > 0 ? [stroke] : [];
+  }
+  // Nested multi-stroke: each element is a stroke (array of pairs).
+  const strokes: TraceStrokes = [];
+  for (const raw of path as unknown[]) {
+    if (!Array.isArray(raw)) continue;
+    const stroke = (raw as unknown[]).filter(isFinitePoint);
+    if (stroke.length > 0) strokes.push(stroke);
+  }
+  return strokes;
+}
+
+/** Total point count across all strokes. */
+export function countStrokePoints(strokes: TraceStrokes): number {
+  return strokes.reduce((sum, s) => sum + s.length, 0);
+}
+
+/**
+ * Learner-facing session over a multi-stroke guide. It wraps one
+ * single-stroke TraceSession per reference stroke and tracks which stroke is
+ * active. Strokes must be traced in order: the learner lifts between them.
+ */
+export interface MultiStrokeSession {
+  readonly strokes: readonly TraceSession[];
+  /** Index of the stroke currently being traced. */
+  readonly current: number;
+  readonly failure: TraceFailure | null;
+  /** True once every stroke has been cleared. */
+  readonly done: boolean;
+}
+
+export function createMultiStrokeSession(
+  guide: TraceStrokes,
+  canvasWidth: number,
+  canvasHeight: number,
+  storedTolerance: number,
+): MultiStrokeSession {
+  const strokes = guide.map((stroke) =>
+    createTraceSession(stroke, canvasWidth, canvasHeight, storedTolerance),
+  );
+  return {
+    strokes,
+    current: 0,
+    failure: null,
+    done: strokes.length === 0,
+  };
+}
+
+/** Feed a finger sample to the active stroke. */
+export function addFingerPointMulti(
+  session: MultiStrokeSession,
+  x: number,
+  y: number,
+): MultiStrokeSession {
+  if (session.failure !== null || session.done) return session;
+  const active = session.strokes[session.current];
+  if (!active) return session;
+  const updated = addFingerPoint(active, x, y);
+  const strokes = session.strokes.map((s, i) =>
+    i === session.current ? updated : s,
+  );
+  if (updated.failure !== null) {
+    return { ...session, strokes, failure: updated.failure };
+  }
+  // Only the final stroke may auto-complete without a lift; intermediate
+  // strokes advance on lift so the learner controls each stroke's start.
+  const isLast = session.current === session.strokes.length - 1;
+  if (isLast && isAutoComplete(updated)) {
+    return { ...session, strokes, done: true };
+  }
+  return { ...session, strokes };
+}
+
+/**
+ * Called when the finger lifts. Evaluates the active stroke: if it cleared,
+ * advance to the next stroke (or finish on the last one); if not, the whole
+ * trace fails. Returns the new session and whether it advanced a stroke.
+ */
+export function liftStrokeMulti(session: MultiStrokeSession): {
+  session: MultiStrokeSession;
+  advanced: boolean;
+} {
+  if (session.failure !== null || session.done) {
+    return { session, advanced: false };
+  }
+  const active = session.strokes[session.current];
+  if (!active) return { session, advanced: false };
+  const { passed, failure } = evaluateLift(active);
+  if (!passed) {
+    return {
+      session: { ...session, failure: failure ?? "coverage" },
+      advanced: false,
+    };
+  }
+  const isLast = session.current === session.strokes.length - 1;
+  if (isLast) {
+    return { session: { ...session, done: true }, advanced: false };
+  }
+  return {
+    session: { ...session, current: session.current + 1 },
+    advanced: true,
+  };
+}
+
+/** Aggregate covered fraction across all strokes (for the progress hint). */
+export function multiCoveredFraction(session: MultiStrokeSession): number {
+  let covered = 0;
+  let total = 0;
+  for (const s of session.strokes) {
+    total += s.covered.length;
+    for (const c of s.covered) if (c) covered++;
+  }
+  return total === 0 ? 0 : covered / total;
+}
