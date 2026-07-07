@@ -23,3 +23,11 @@ next-env.d.ts
 
 # vercel
 .vercel
+
+# local env files — may hold a real GITHUB_TOKEN / AUTHOR_PASSWORD.
+# (.env.local.example is a secret-free template and stays tracked.)
+.env
+.env*.local
+
+# ElevenLabs generate-audio.mjs --local-only preview output
+/temp-audio
