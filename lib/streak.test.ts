@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { localDateString, nextDay, recordActiveDay } from "./streak";
+import {
+  getStreakMultiplier,
+  localDateString,
+  nextDay,
+  recordActiveDay,
+} from "./streak";
 
 describe("localDateString", () => {
   it("formats in local time with zero padding", () => {
@@ -51,5 +56,28 @@ describe("recordActiveDay", () => {
     const one = recordActiveDay(fresh, "2026-01-31");
     const two = recordActiveDay(one, "2026-02-01");
     expect(two.streakCount).toBe(2);
+  });
+});
+
+describe("getStreakMultiplier", () => {
+  it("returns the correct multiplier at every tier boundary", () => {
+    expect(getStreakMultiplier(0)).toBe(1.0);
+    expect(getStreakMultiplier(4)).toBe(1.0);
+    expect(getStreakMultiplier(5)).toBe(1.1);
+    expect(getStreakMultiplier(9)).toBe(1.1);
+    expect(getStreakMultiplier(10)).toBe(1.2);
+    expect(getStreakMultiplier(19)).toBe(1.2);
+    expect(getStreakMultiplier(20)).toBe(1.5);
+    expect(getStreakMultiplier(49)).toBe(1.5);
+    expect(getStreakMultiplier(50)).toBe(2.0);
+    expect(getStreakMultiplier(1000)).toBe(2.0);
+  });
+
+  it("applies correctly to a lesson XP total", () => {
+    const base = 120;
+    expect(Math.round(base * getStreakMultiplier(4))).toBe(120);
+    expect(Math.round(base * getStreakMultiplier(5))).toBe(132);
+    expect(Math.round(base * getStreakMultiplier(20))).toBe(180);
+    expect(Math.round(base * getStreakMultiplier(50))).toBe(240);
   });
 });

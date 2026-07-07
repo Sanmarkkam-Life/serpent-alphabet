@@ -23,8 +23,12 @@ export interface Lesson {
   vallalar_note: string | null;
   /** Path to reference pronunciation audio; the file may be missing. */
   audio: string;
-  /** Author-recorded guide path in normalized 0–1 coordinates. */
-  trace_path: NormalizedPoint[];
+  /**
+   * Author-recorded guide, normalized to the multi-stroke form
+   * `NormalizedPoint[][]` (one inner array per continuous stroke). The loader
+   * accepts the legacy flat single-stroke form in JSON and normalizes it.
+   */
+  trace_path: NormalizedPoint[][];
   /** Seconds allowed to finish the trace. */
   trace_time_limit: number;
   /** Corridor half-width in px at the 390px reference canvas width. */

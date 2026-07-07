@@ -15,8 +15,10 @@ describe("migrateV1ToV2", () => {
       streakCount: 0,
       lastActiveDate: null,
       mute: false,
-      // Anyone with completed lessons has effectively seen the beginning.
+      // Anyone with completed lessons has effectively seen both intros.
       introViewed: true,
+      tamilIntroViewed: true,
+      flawlessStreak: 0,
     });
   });
 
@@ -41,8 +43,44 @@ describe("normalizeProgress", () => {
       lastActiveDate: "2026-07-05",
       mute: true,
       introViewed: true,
+      tamilIntroViewed: true,
+      flawlessStreak: 7,
     };
     expect(normalizeProgress(valid)).toEqual(valid);
+  });
+
+  it("defaults flawlessStreak to 0 and backfills tamilIntroViewed", () => {
+    // A fresh payload without the v4 fields.
+    const legacy = {
+      completed: [],
+      xp: 0,
+      streakCount: 0,
+      lastActiveDate: null,
+      mute: false,
+      introViewed: false,
+    } as Record<string, unknown>;
+    const norm = normalizeProgress(legacy);
+    expect(norm.flawlessStreak).toBe(0);
+    expect(norm.tamilIntroViewed).toBe(false);
+  });
+
+  it("backfills tamilIntroViewed when the Soul Letters intro was seen", () => {
+    const seen = normalizeProgress({
+      ...defaultProgress(),
+      introViewed: true,
+    });
+    expect(seen.tamilIntroViewed).toBe(true);
+  });
+
+  it("rejects a negative or fractional flawlessStreak", () => {
+    expect(
+      normalizeProgress({ ...defaultProgress(), flawlessStreak: -3 })
+        .flawlessStreak,
+    ).toBe(0);
+    expect(
+      normalizeProgress({ ...defaultProgress(), flawlessStreak: 2.5 })
+        .flawlessStreak,
+    ).toBe(0);
   });
 
   it("backfills introViewed for payloads with completed lessons", () => {

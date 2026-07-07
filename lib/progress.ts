@@ -32,6 +32,19 @@ export interface Progress {
    * treated as having seen it (they were never meant to be re-locked).
    */
   introViewed: boolean;
+  /**
+   * True once the "About Tamil" intro has been viewed; the Soul Letters
+   * intro stays locked until then. Additive field: existing users who have
+   * already seen Soul Letters or completed a lesson are backfilled as true
+   * so they are never re-locked.
+   */
+  tamilIntroViewed: boolean;
+  /**
+   * Global, persistent count of consecutive flawless task passes across the
+   * whole app. Increments on every clean pass, resets to 0 on any mistake.
+   * Distinct from the per-lesson combo. Additive field, defaults to 0.
+   */
+  flawlessStreak: number;
 }
 
 export function defaultProgress(): Progress {
@@ -42,6 +55,8 @@ export function defaultProgress(): Progress {
     lastActiveDate: null,
     mute: false,
     introViewed: false,
+    tamilIntroViewed: false,
+    flawlessStreak: 0,
   };
 }
 
@@ -82,6 +97,18 @@ export function normalizeProgress(raw: unknown): Progress {
     introViewed:
       (typeof obj.introViewed === "boolean" && obj.introViewed) ||
       completed.length > 0,
+    // Backfill: anyone past the Soul Letters intro (viewed it, or completed a
+    // lesson) is treated as having seen the Tamil intro, never re-locked.
+    tamilIntroViewed:
+      (typeof obj.tamilIntroViewed === "boolean" && obj.tamilIntroViewed) ||
+      (typeof obj.introViewed === "boolean" && obj.introViewed) ||
+      completed.length > 0,
+    flawlessStreak:
+      typeof obj.flawlessStreak === "number" &&
+      Number.isInteger(obj.flawlessStreak) &&
+      obj.flawlessStreak >= 0
+        ? obj.flawlessStreak
+        : base.flawlessStreak,
   };
 }
 
@@ -190,6 +217,35 @@ export function markIntroViewed(): Progress {
   const progress = loadProgress();
   if (progress.introViewed) return progress;
   const next: Progress = { ...progress, introViewed: true };
+  saveProgress(next);
+  return next;
+}
+
+/** Mark the "About Tamil" intro as viewed; unlocks the Soul Letters intro. */
+export function markTamilIntroViewed(): Progress {
+  const progress = loadProgress();
+  if (progress.tamilIntroViewed) return progress;
+  const next: Progress = { ...progress, tamilIntroViewed: true };
+  saveProgress(next);
+  return next;
+}
+
+/** Increment the global flawless streak after a clean task pass. */
+export function bumpFlawlessStreak(): Progress {
+  const progress = loadProgress();
+  const next: Progress = {
+    ...progress,
+    flawlessStreak: progress.flawlessStreak + 1,
+  };
+  saveProgress(next);
+  return next;
+}
+
+/** Reset the flawless streak to 0 after any mistake. */
+export function resetFlawlessStreak(): Progress {
+  const progress = loadProgress();
+  if (progress.flawlessStreak === 0) return progress;
+  const next: Progress = { ...progress, flawlessStreak: 0 };
   saveProgress(next);
   return next;
 }

@@ -14,13 +14,19 @@ import type { Lesson } from "@/lib/types";
  */
 
 export interface LessonSummary {
-  /** Total XP earned this lesson, with its breakdown. */
+  /** Base lesson XP (tasks + combo + time), before the streak multiplier. */
   xp: TaskXp;
   /** Highest combo multiplier reached. */
   bestCombo: number;
   /** The level newly reached at lesson end, or null. */
   levelUp: SnakeLevel | null;
   flavor: "normal" | "review" | "testout";
+  /** Flawless-streak XP multiplier applied to the lesson total (>= 1.0). */
+  streakMultiplier: number;
+  /** Flawless streak count at lesson end. */
+  flawlessStreak: number;
+  /** Final XP after the streak multiplier (what was actually banked). */
+  finalTotal: number;
 }
 
 export interface CelebrationProps {
@@ -163,21 +169,31 @@ export default function Celebration({
         <div className="w-full rounded-blob bg-cream-soft p-5 text-left shadow-leaf">
           <div className="flex items-baseline justify-between">
             <span className="font-ui text-lg font-extrabold text-forest">
-              ⚡ XP earned
+              XP earned
             </span>
             <span className="font-ui text-2xl font-extrabold text-serpent-deep">
-              +{summary.xp.total}
+              +{summary.finalTotal}
             </span>
           </div>
           <div className="mt-3 space-y-1.5 border-t border-sage-200 pt-3">
             <SummaryRow label="Base" value={summary.xp.base} />
             <SummaryRow label="Combo bonus" value={summary.xp.comboBonus} />
             <SummaryRow label="Time bonus" value={summary.xp.timeBonus} />
+            {summary.streakMultiplier > 1 && (
+              <SummaryRow
+                label={`⚡ Streak x${summary.streakMultiplier.toFixed(1)}`}
+                value={summary.finalTotal - summary.xp.total}
+              />
+            )}
             <div className="flex items-center justify-between font-ui text-sm text-forest">
               <span>Best combo</span>
               <span className="font-bold">
                 x{summary.bestCombo.toFixed(1)}
               </span>
+            </div>
+            <div className="flex items-center justify-between font-ui text-sm text-forest">
+              <span>Flawless streak</span>
+              <span className="font-bold">⚡ {summary.flawlessStreak}</span>
             </div>
           </div>
           {summary.levelUp !== null && (

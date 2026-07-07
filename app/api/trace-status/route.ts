@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getFile, GithubError, listDirectory } from "@/lib/github";
+import { countStrokePoints, normalizeTracePath } from "@/lib/trace";
 import { resolveGithubConfig } from "../_github-config";
 
 /**
@@ -69,13 +70,15 @@ export async function GET() {
             order?: unknown;
             trace_path?: unknown;
           };
-          const path = Array.isArray(data.trace_path) ? data.trace_path : [];
+          // Count points across strokes so both the legacy flat form and the
+          // multi-stroke form report a real point total (not stroke count).
+          const points = countStrokePoints(normalizeTracePath(data.trace_path));
           return {
             id: typeof data.id === "string" ? data.id : entry.name.replace(/\.json$/, ""),
             glyph: typeof data.glyph === "string" ? data.glyph : "?",
             order: typeof data.order === "number" ? data.order : 9999,
-            hasTrace: path.length > 0,
-            points: path.length,
+            hasTrace: points > 0,
+            points,
           };
         } catch {
           // A single unparseable file shouldn't sink the whole board.
