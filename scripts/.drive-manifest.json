@@ -1,5 +1,5 @@
 {
-  "lastSync": "2026-07-06T21:01:31.265Z",
+  "lastSync": "2026-07-07T11:21:47.610Z",
   "files": {
     "183jnFUFwB5yfOk6g402VYL9ZDT_EczSY": {
       "name": "ஔ.png",
@@ -144,6 +144,84 @@
       "md5": "6f5aacc52e9a02c7447528ab7544d169",
       "target": "public/letters/இ.png",
       "syncedAt": "2026-07-06T21:01:31.265Z"
+    },
+    "1a4ZvQdgJweXkzqLutqB2d51b8THgk1Jg": {
+      "name": "ஃ.mp3",
+      "md5": "f84fc9ebdfd7e6f925be7f4dee2285aa",
+      "target": "public/audio/ஃ.mp3",
+      "syncedAt": "2026-07-07T11:21:41.435Z"
+    },
+    "1jN0ciQ_JLOhEZlF2Z9UvWDb5XWeFBatU": {
+      "name": "ஔ.mp3",
+      "md5": "2293e0988b7f660aa0db21137208ac26",
+      "target": "public/audio/ஔ.mp3",
+      "syncedAt": "2026-07-07T11:21:41.945Z"
+    },
+    "1FXuGZ2rUQWLi0WlbOV6m4bRy5adhHOUV": {
+      "name": "ஓ.mp3",
+      "md5": "d0163e9e7159aebe6f79a36b748713bc",
+      "target": "public/audio/ஓ.mp3",
+      "syncedAt": "2026-07-07T11:21:42.411Z"
+    },
+    "1KY-9okN3yk9nzxTi29KmiMnoH2GgQD_U": {
+      "name": "ஒ.mp3",
+      "md5": "1ebe20e155517bdb6d8b1563faa6d181",
+      "target": "public/audio/ஒ.mp3",
+      "syncedAt": "2026-07-07T11:21:42.896Z"
+    },
+    "1Q8EArkAmD8cgCtbt8eAYalZXUKg6Hr1P": {
+      "name": "ஐ.mp3",
+      "md5": "195c338aef28c9b14f2a7f5f5b56ed9c",
+      "target": "public/audio/ஐ.mp3",
+      "syncedAt": "2026-07-07T11:21:43.374Z"
+    },
+    "1sQVqXbJoE5OFRCWaf2TaPyR8HmjCok9u": {
+      "name": "ஏ.mp3",
+      "md5": "91b47c5c880a0fc1104e0e4f41ce4488",
+      "target": "public/audio/ஏ.mp3",
+      "syncedAt": "2026-07-07T11:21:44.008Z"
+    },
+    "1FZtQkSqZLoqLII-wY7DkqjrHJ0_znC4D": {
+      "name": "எ.mp3",
+      "md5": "49c16090e3d020931c169b94ef1334f0",
+      "target": "public/audio/எ.mp3",
+      "syncedAt": "2026-07-07T11:21:44.564Z"
+    },
+    "1997EUrSZa3TRiJXtTqyMQ6CGd4pjflR5": {
+      "name": "ஊ.mp3",
+      "md5": "cbb17ab03f6b43e9823953d320cb7913",
+      "target": "public/audio/ஊ.mp3",
+      "syncedAt": "2026-07-07T11:21:45.105Z"
+    },
+    "12kTrqGHiPflwqIY2iC8e35xiBTCcLEBc": {
+      "name": "உ.mp3",
+      "md5": "6767b35f8c9e697939eb09298aae7ced",
+      "target": "public/audio/உ.mp3",
+      "syncedAt": "2026-07-07T11:21:45.642Z"
+    },
+    "1lFRGNQykTX1R_j8J4_TG1thTF23gWfxq": {
+      "name": "ஈ.mp3",
+      "md5": "5c568294c80bb8b774245073d81ed36e",
+      "target": "public/audio/ஈ.mp3",
+      "syncedAt": "2026-07-07T11:21:46.137Z"
+    },
+    "1fUb3diEaeZ-qvmoNf6FKcOMp9aYGea4Q": {
+      "name": "இ.mp3",
+      "md5": "fa9488bf397456c73b0f2147e73d19a2",
+      "target": "public/audio/இ.mp3",
+      "syncedAt": "2026-07-07T11:21:46.585Z"
+    },
+    "1fhXbpGexOJkDjzG1mC_Khei7za_WQMNr": {
+      "name": "ஆ.mp3",
+      "md5": "4eeffa9ac7987e4abadf02d6938d7d9d",
+      "target": "public/audio/ஆ.mp3",
+      "syncedAt": "2026-07-07T11:21:47.101Z"
+    },
+    "1i6SLUNq8bx6kCj0W5ZMSwaO6Q4ebk4Q_": {
+      "name": "அ.mp3",
+      "md5": "0b6f39002383e09932e1fae1b815a217",
+      "target": "public/audio/அ.mp3",
+      "syncedAt": "2026-07-07T11:21:47.610Z"
     }
   }
 }
