@@ -38,6 +38,18 @@ export interface AuthorStudioProps {
 
 type StudioMode = "record" | "test";
 type TestOutcome = "passed" | "failed" | null;
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+interface LessonStatus {
+  id: string;
+  glyph: string;
+  order: number;
+  hasTrace: boolean;
+  points: number;
+}
+
+/** Author password lives in sessionStorage only (never in the repo/bundle). */
+const PASSWORD_STORAGE_KEY = "serpent_author_password";
 
 const PREVIEW_DURATION_MS = 2000;
 const STROKE_COLOR = "#F5A94B"; // serpent
@@ -65,6 +77,15 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [recording, setRecording] = useState<RecordedAudio | null>(null);
   const [audioError, setAudioError] = useState<string | null>(null);
+
+  // Auto-sync state (status board + one-tap save to GitHub)
+  const [traceStatus, setTraceStatus] = useState<LessonStatus[] | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [authorPassword, setAuthorPassword] = useState<string>("");
+  const [passwordInput, setPasswordInput] = useState<string>("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   // Refs for hot paths / cleanup
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -328,6 +349,119 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
     setRecordingSupported(isRecordingSupported());
   }, []);
 
+  /* ---------------------------------------------------------------- */
+  /* Auto-sync: status board + one-tap save                            */
+  /* ---------------------------------------------------------------- */
+
+  const refreshStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/trace-status", { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error ?? `Status request failed (${res.status})`);
+      }
+      setTraceStatus(Array.isArray(data.lessons) ? data.lessons : []);
+      setStatusError(null);
+    } catch (err) {
+      setStatusError(
+        err instanceof Error ? err.message : "Could not load trace status.",
+      );
+    }
+  }, []);
+
+  // On mount: restore the author password and load the live status board.
+  useEffect(() => {
+    try {
+      const stored = window.sessionStorage.getItem(PASSWORD_STORAGE_KEY);
+      if (stored) setAuthorPassword(stored);
+    } catch {
+      // sessionStorage may be unavailable; the author can re-enter it.
+    }
+    void refreshStatus();
+  }, [refreshStatus]);
+
+  // A freshly recorded/cleared path or a lesson switch clears stale save UI.
+  useEffect(() => {
+    setSaveState("idle");
+    setSaveMessage(null);
+  }, [recordedPath, selectedId]);
+
+  const persistPassword = (pw: string) => {
+    setAuthorPassword(pw);
+    setChangingPassword(false);
+    try {
+      window.sessionStorage.setItem(PASSWORD_STORAGE_KEY, pw);
+    } catch {
+      // Non-fatal: the password still works for this session in memory.
+    }
+  };
+
+  const handleSaveToGitHub = useCallback(async () => {
+    if (!recordedPath || !selectedLesson) return;
+    if (!authorPassword) {
+      setSaveMessage("Enter the author password first.");
+      return;
+    }
+    setSaveState("saving");
+    setSaveMessage(null);
+    try {
+      const res = await fetch("/api/save-trace", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedLesson.id,
+          trace_path: recordedPath,
+          password: authorPassword,
+        }),
+      });
+      if (res.status === 401) {
+        setSaveState("error");
+        setSaveMessage("Wrong author password. Enter it again.");
+        setAuthorPassword("");
+        try {
+          window.sessionStorage.removeItem(PASSWORD_STORAGE_KEY);
+        } catch {
+          // ignore
+        }
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error ?? `Save failed (${res.status})`);
+      }
+      setSaveState("saved");
+      setSaveMessage(
+        `Saved ✓ ${data.points ?? recordedPath.length} points. Live in ~1 min after redeploy.`,
+      );
+      // Optimistic badge flip for the letter we just saved.
+      setTraceStatus((prev) =>
+        prev
+          ? prev.map((l) =>
+              l.id === selectedLesson.id
+                ? { ...l, hasTrace: true, points: recordedPath.length }
+                : l,
+            )
+          : prev,
+      );
+    } catch (err) {
+      // Never lose a trace: fall back to the clipboard on any network/save error.
+      setSaveState("error");
+      let copiedOk = false;
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(recordedPath));
+        copiedOk = true;
+      } catch {
+        // clipboard may be blocked; the JSON textarea below is the last resort
+      }
+      const base = err instanceof Error ? err.message : "Save failed.";
+      setSaveMessage(
+        copiedOk
+          ? `${base} JSON copied to clipboard as a fallback.`
+          : `${base} Copy the JSON below manually.`,
+      );
+    }
+  }, [recordedPath, selectedLesson, authorPassword]);
+
   const handleStartAudio = async () => {
     setAudioError(null);
     try {
@@ -486,6 +620,67 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
         </p>
       </Card>
 
+      {/* Live status board — truth from GitHub, not the deployed bundle. */}
+      <section aria-label="Trace status">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="font-ui text-lg font-bold text-forest">Letters</h2>
+          <button
+            type="button"
+            onClick={() => void refreshStatus()}
+            className="min-h-[44px] px-2 font-ui text-sm font-bold text-forest underline underline-offset-4"
+          >
+            Refresh
+          </button>
+        </div>
+        {statusError && (
+          <Card className="mb-2">
+            <p className="font-ui text-sm text-serpent-deep">
+              Status unavailable: {statusError} You can still trace and use
+              Copy JSON.
+            </p>
+          </Card>
+        )}
+        {traceStatus === null && !statusError && (
+          <p className="font-ui text-sm text-forest-soft">Loading status…</p>
+        )}
+        {traceStatus && (
+          <>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {traceStatus.map((l) => {
+                const active = l.id === selectedLesson.id;
+                return (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => handleSelectLesson(l.id)}
+                    aria-label={`${l.id}, ${l.hasTrace ? `traced, ${l.points} points` : "pending"}`}
+                    className={`flex min-h-[64px] flex-col items-center justify-center rounded-2xl border-2 p-1 transition-colors ${
+                      active ? "border-forest" : "border-sage-200"
+                    } ${l.hasTrace ? "bg-sage-100" : "bg-cream-soft"}`}
+                  >
+                    <span className="font-tamil text-2xl leading-none text-forest">
+                      {l.glyph}
+                    </span>
+                    <span
+                      className={`mt-1 font-ui text-[10px] font-bold ${
+                        l.hasTrace ? "text-forest" : "text-sage-500"
+                      }`}
+                    >
+                      {l.hasTrace ? "✓ traced" : "pending"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 font-ui text-xs text-forest-soft">
+              <span className="font-bold text-forest">✓ traced</span> has a
+              saved path ·{" "}
+              <span className="font-bold text-sage-500">pending</span> needs one
+            </p>
+          </>
+        )}
+      </section>
+
       {/* Lesson picker */}
       <section>
         <label
@@ -566,6 +761,75 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
           >
             Test it
           </Button>
+        </div>
+
+        {/* One-tap save straight to GitHub (server-side, password-gated). */}
+        <div className="space-y-2">
+          {authorPassword && !changingPassword ? (
+            <>
+              <Button
+                fullWidth
+                onClick={() => void handleSaveToGitHub()}
+                disabled={!recordedPath || saveState === "saving"}
+              >
+                {saveState === "saving"
+                  ? "Saving…"
+                  : saveState === "saved"
+                    ? "Saved ✓"
+                    : "Save to GitHub"}
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChangingPassword(true);
+                  setPasswordInput("");
+                }}
+                className="min-h-[44px] font-ui text-xs text-forest-soft underline underline-offset-4"
+              >
+                Change author password
+              </button>
+            </>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (passwordInput) persistPassword(passwordInput);
+              }}
+              className="space-y-2"
+            >
+              <label
+                htmlFor="author-password"
+                className="block font-ui text-sm font-bold text-forest"
+              >
+                Author password (needed to save)
+              </label>
+              <input
+                id="author-password"
+                type="password"
+                autoComplete="current-password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="min-h-[48px] w-full rounded-blob border-2 border-sage-300 bg-cream-soft px-4 font-ui text-base text-forest"
+              />
+              <Button
+                type="submit"
+                fullWidth
+                variant="secondary"
+                disabled={!passwordInput}
+              >
+                Save password for this session
+              </Button>
+            </form>
+          )}
+          {saveMessage && (
+            <p
+              className={`font-ui text-sm ${
+                saveState === "error" ? "text-serpent-deep" : "text-forest"
+              }`}
+            >
+              {saveMessage}
+            </p>
+          )}
         </div>
         {recordedPath && (
           <div>
