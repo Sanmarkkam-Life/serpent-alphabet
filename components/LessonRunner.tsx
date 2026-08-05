@@ -22,14 +22,19 @@ import { levelUpBetween } from "@/lib/levels";
 import {
   addXp,
   bumpFlawlessStreak,
+  claimChest,
+  consumeFlawlessShield,
+  isChestClaimed,
   isLessonComplete,
   loadProgress,
   markLessonComplete,
   recordTaskActivity,
   resetFlawlessStreak,
   setMute,
+  type ChestClaimResult,
+  type ShieldType,
 } from "@/lib/progress";
-import { getStreakMultiplier } from "@/lib/streak";
+import { applyStreakMultipliers } from "@/lib/streak";
 import { feedbackFail, feedbackFanfare, feedbackPass } from "@/lib/sfx";
 import {
   COMBO_START,
@@ -112,6 +117,8 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
   // Global flawless streak (persistent across lessons/sessions).
   const [flawlessStreak, setFlawlessStreak] = useState(0);
   const [streakResetFlash, setStreakResetFlash] = useState(false);
+  // A flawless shield absorbed the mistake; brief, non-blocking reassurance.
+  const [shieldSavedFlash, setShieldSavedFlash] = useState(false);
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Test-out state
@@ -157,9 +164,19 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
   };
 
   const breakStreak = (): void => {
+    // A flawless shield absorbs the hit and keeps the streak alive. Only spend
+    // one when there is actually a streak to protect.
+    if (flawlessStreak > 0 && consumeFlawlessShield().used) {
+      setShieldSavedFlash(true);
+      setStreakResetFlash(false);
+      if (flashTimeoutRef.current !== null) clearTimeout(flashTimeoutRef.current);
+      flashTimeoutRef.current = setTimeout(() => setShieldSavedFlash(false), 1800);
+      return;
+    }
     resetFlawlessStreak();
     setFlawlessStreak(0);
     setStreakResetFlash(true);
+    setShieldSavedFlash(false);
     if (flashTimeoutRef.current !== null) clearTimeout(flashTimeoutRef.current);
     flashTimeoutRef.current = setTimeout(() => setStreakResetFlash(false), 900);
   };
@@ -171,8 +188,8 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
   }, []);
 
   /**
-   * Apply the flawless-streak multiplier to the lesson total, bank the bonus
-   * XP, and build the celebration summary.
+   * Apply both streak multipliers (flawless x daily) to the lesson total,
+   * bank the combined bonus XP, and build the celebration summary.
    */
   const summarize = (
     finalXp: TaskXp,
@@ -180,8 +197,13 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
     streakForBonus: number,
     flavor: LessonSummary["flavor"],
   ): LessonSummary => {
-    const streakMultiplier = getStreakMultiplier(streakForBonus);
-    const bonus = Math.round(finalXp.total * (streakMultiplier - 1));
+    // Read progress once: the daily streak is current (recordTaskActivity has
+    // already run this session) and tells us whether a chest is still owed.
+    const before = loadProgress();
+    const dailyStreak = before.streakCount;
+    const { flawlessMultiplier, dailyMultiplier, finalTotal } =
+      applyStreakMultipliers(finalXp.total, streakForBonus, dailyStreak);
+    const bonus = finalTotal - finalXp.total;
     if (bonus > 0) addXp(bonus);
     const totalAfter = loadProgress().xp;
     return {
@@ -189,10 +211,20 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
       bestCombo: finalBestCombo,
       levelUp: levelUpBetween(xpAtStart, totalAfter),
       flavor,
-      streakMultiplier,
+      flawlessMultiplier,
+      dailyMultiplier,
       flawlessStreak: streakForBonus,
-      finalTotal: finalXp.total + bonus,
+      dailyStreak,
+      finalTotal,
+      // A chest appears on first completion only, never in review, and never
+      // twice for the same lesson.
+      offerChest: flavor !== "review" && !isChestClaimed(before, lesson.id),
     };
+  };
+
+  /** Open this lesson's chest and bank the chosen shield. */
+  const handleClaimShield = (choice: ShieldType): ChestClaimResult => {
+    return claimChest(lesson.id, choice).result;
   };
 
   const finishLesson = (
@@ -332,7 +364,12 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
 
   if (view === "celebrate" && summary !== null) {
     return (
-      <Celebration lesson={lesson} nextLesson={nextLesson} summary={summary} />
+      <Celebration
+        lesson={lesson}
+        nextLesson={nextLesson}
+        summary={summary}
+        onClaimShield={handleClaimShield}
+      />
     );
   }
 
@@ -444,6 +481,19 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
           <span aria-hidden="true">{muted ? "🔇" : "🔉"}</span>
         </button>
       </header>
+
+      {/* A flawless shield absorbed a mistake: brief, non-blocking. */}
+      {shieldSavedFlash && (
+        <div
+          className="mx-auto w-full max-w-md px-4"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="animate-pop-in rounded-full bg-wisdom-soft px-4 py-2 text-center font-ui text-sm font-extrabold text-wisdom-deep">
+            🛡️ Flawless Shield used! Streak saved.
+          </div>
+        </div>
+      )}
 
       {view === "fail" && (
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-6 px-6 pb-10 text-center">

@@ -12,6 +12,7 @@
  *   node scripts/generate-audio.mjs --voice-id=ID --only=அ,ஆ
  *   node scripts/generate-audio.mjs --voice-id=ID --local-only   # write ./temp-audio, no upload
  *   node scripts/generate-audio.mjs --voice-id=ID --force        # regenerate even if in Drive
+ *   node scripts/generate-audio.mjs --voice-id=ID --model=ID     # override the default TTS model
  *
  * Secrets (env only, never written to disk):
  *   ELEVENLABS_API_KEY, GOOGLE_SERVICE_ACCOUNT_KEY
@@ -31,6 +32,15 @@ import { google } from "googleapis";
 const AUDIO_FOLDER_ID = "1B1scaNVXq7TSQ1UVCXGAhip6V0qrjmZ2";
 
 const ELEVENLABS_BASE = "https://api.elevenlabs.io/v1";
+
+// Built-in fallbacks, used only when the pronunciation map has no `defaults`
+// block (older map format). The map's `defaults` — and per-letter overrides —
+// take precedence when present. See resolveDefaults() / letter resolution.
+//
+// If your ElevenLabs account has a newer, higher-quality model, set it in the
+// map's defaults.model_id or pass --model=<id>; check the ElevenLabs docs for
+// the current best model for short multilingual utterances. Do not hard-assume
+// any model beyond this documented default.
 const TTS_MODEL_ID = "eleven_multilingual_v2";
 const VOICE_SETTINGS = {
   stability: 0.75,
@@ -49,13 +59,14 @@ const LOCAL_OUT_DIR = path.join(REPO_ROOT, "temp-audio");
 
 /* ---- CLI parsing ----------------------------------------------------- */
 
-/** @returns {{ voiceId: string | null, only: string[] | null, localOnly: boolean, force: boolean }} */
+/** @returns {{ voiceId: string | null, only: string[] | null, localOnly: boolean, force: boolean, model: string | null }} */
 function parseArgs(argv) {
   const args = {
     voiceId: /** @type {string | null} */ (null),
     only: /** @type {string[] | null} */ (null),
     localOnly: false,
     force: false,
+    model: /** @type {string | null} */ (null),
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -65,6 +76,8 @@ function parseArgs(argv) {
     else if (a === "--voice-id") args.voiceId = argv[++i] ?? null;
     else if (a.startsWith("--only=")) args.only = splitGlyphs(a.slice(7));
     else if (a === "--only") args.only = splitGlyphs(argv[++i] ?? "");
+    else if (a.startsWith("--model=")) args.model = a.slice(8);
+    else if (a === "--model") args.model = argv[++i] ?? null;
   }
   return args;
 }
@@ -92,7 +105,28 @@ function requireElevenLabsKey() {
   return key;
 }
 
-/** List voices and print the first 20 as a simple table. */
+/** Best-effort language string from whatever fields a voice exposes. */
+function voiceLanguage(v) {
+  if (Array.isArray(v.verified_languages) && v.verified_languages.length > 0) {
+    return v.verified_languages
+      .map((x) => x?.language ?? x?.locale ?? "")
+      .filter(Boolean)
+      .join("/");
+  }
+  return v.labels?.language ?? v.fine_tuning?.language ?? "";
+}
+
+/** Compact "key: value" summary of a voice's labels, if any. */
+function voiceLabelSummary(v) {
+  const labels = v.labels;
+  if (!labels || typeof labels !== "object") return "";
+  return Object.entries(labels)
+    .filter(([, val]) => typeof val === "string" && val.trim() !== "")
+    .map(([key, val]) => `${key}: ${val}`)
+    .join(", ");
+}
+
+/** List voices with the language/labels/description that help pick a Tamil voice. */
 async function listVoices(apiKey) {
   const res = await fetch(`${ELEVENLABS_BASE}/voices`, {
     headers: { "xi-api-key": apiKey },
@@ -105,13 +139,31 @@ async function listVoices(apiKey) {
   }
   const data = await res.json();
   const voices = Array.isArray(data.voices) ? data.voices : [];
-  console.log(`\nAvailable ElevenLabs voices (showing up to 20 of ${voices.length}):\n`);
-  console.log("  " + "NAME".padEnd(28) + "VOICE_ID");
-  console.log("  " + "-".repeat(28) + "-".repeat(24));
+  console.log(
+    `\nAvailable ElevenLabs voices (showing up to 20 of ${voices.length}):\n`,
+  );
   for (const v of voices.slice(0, 20)) {
-    const name = String(v.name ?? "(unnamed)").slice(0, 26);
-    console.log("  " + name.padEnd(28) + String(v.voice_id ?? ""));
+    const name = String(v.name ?? "(unnamed)");
+    console.log(`  ${name}`);
+    console.log(`    voice_id: ${String(v.voice_id ?? "")}`);
+    const language = voiceLanguage(v);
+    if (language) console.log(`    language: ${language}`);
+    const labels = voiceLabelSummary(v);
+    if (labels) console.log(`    labels:   ${labels}`);
+    const description = v.description ?? v.labels?.description ?? "";
+    if (description) {
+      console.log(`    about:    ${String(description).slice(0, 100)}`);
+    }
+    console.log("");
   }
+  console.log(
+    "For Tamil vowels, choose a multilingual/Tamil voice; English-only " +
+      "voices mispronounce isolated letters.",
+  );
+  console.log(
+    "If none above suit Tamil, add a multilingual or Tamil-native voice from " +
+      "the ElevenLabs Voice Library to your account, then re-run.",
+  );
   console.log(
     "\nNo --voice-id specified. Pick one from above and run again with " +
       "--voice-id=<id>\n",
@@ -119,10 +171,11 @@ async function listVoices(apiKey) {
 }
 
 /**
- * Synthesize one letter to an mp3 Buffer.
+ * Synthesize one letter to an mp3 Buffer, using the resolved model and voice
+ * settings for that letter.
  * @returns {Promise<Buffer>}
  */
-async function synthesize(apiKey, voiceId, text) {
+async function synthesize(apiKey, voiceId, text, modelId, voiceSettings) {
   const res = await fetch(
     `${ELEVENLABS_BASE}/text-to-speech/${encodeURIComponent(voiceId)}`,
     {
@@ -134,8 +187,8 @@ async function synthesize(apiKey, voiceId, text) {
       },
       body: JSON.stringify({
         text,
-        model_id: TTS_MODEL_ID,
-        voice_settings: VOICE_SETTINGS,
+        model_id: modelId,
+        voice_settings: voiceSettings,
       }),
     },
   );
@@ -236,6 +289,35 @@ async function uploadMp3(drive, glyph, buffer) {
   });
 }
 
+/* ---- Config resolution ----------------------------------------------- */
+
+/**
+ * Resolve the top-level model + voice settings. Precedence for the model:
+ * --model flag > map `defaults.model_id` > built-in default. Voice settings
+ * from the map's defaults merge over (and so override) the built-in fallback.
+ * When the map has no `defaults` block (older format), the built-ins apply.
+ * @returns {{ model_id: string, voice_settings: Record<string, unknown> }}
+ */
+function resolveDefaults(map, cliModel) {
+  const d = map.defaults ?? {};
+  return {
+    model_id: cliModel ?? d.model_id ?? TTS_MODEL_ID,
+    voice_settings: { ...VOICE_SETTINGS, ...(d.voice_settings ?? {}) },
+  };
+}
+
+/**
+ * The exact text sent to TTS for a letter: an explicit `pronunciationText`
+ * override if present, else the glyph (`tamilText`). The legacy `usePhonetic`
+ * flag is still honoured as a fallback for entries that set it.
+ */
+function textForLetter(letter) {
+  if (typeof letter.pronunciationText === "string" && letter.pronunciationText !== "") {
+    return letter.pronunciationText;
+  }
+  return letter.usePhonetic ? letter.phoneticHint : letter.tamilText;
+}
+
 /* ---- Main ------------------------------------------------------------ */
 
 async function main() {
@@ -243,9 +325,10 @@ async function main() {
   const apiKey = requireElevenLabsKey();
 
   const mapRaw = await fs.readFile(MAP_PATH, "utf-8");
-  /** @type {{ letters: Array<{glyph: string, id: string, tamilText: string, phoneticHint: string, notes?: string, usePhonetic?: boolean}> }} */
+  /** @type {{ defaults?: { model_id?: string, voice_settings?: Record<string, unknown> }, letters: Array<{glyph: string, id: string, tamilText: string, phoneticHint: string, notes?: string, usePhonetic?: boolean, pronunciationText?: string, model_id?: string, voice_settings?: Record<string, unknown>}> }} */
   const map = JSON.parse(mapRaw);
   let letters = map.letters ?? [];
+  const defaults = resolveDefaults(map, args.model);
 
   // No voice chosen yet: list voices so the author can pick one, then stop.
   if (!args.voiceId) {
@@ -293,6 +376,8 @@ async function main() {
   let generated = 0;
   let skipped = 0;
   let failed = 0;
+  /** Glyphs actually (re)generated this run, for the summary. */
+  const regenerated = [];
 
   for (let i = 0; i < letters.length; i++) {
     const letter = letters[i];
@@ -305,11 +390,17 @@ async function main() {
       continue;
     }
 
-    const text = letter.usePhonetic ? letter.phoneticHint : letter.tamilText;
+    // Per-letter overrides merge over the resolved defaults.
+    const text = textForLetter(letter);
+    const modelId = letter.model_id ?? defaults.model_id;
+    const voiceSettings = {
+      ...defaults.voice_settings,
+      ...(letter.voice_settings ?? {}),
+    };
 
     let buffer;
     try {
-      buffer = await synthesize(apiKey, args.voiceId, text);
+      buffer = await synthesize(apiKey, args.voiceId, text, modelId, voiceSettings);
     } catch (err) {
       // A 401 means the ElevenLabs key is bad; every call will fail, so stop.
       // @ts-expect-error status attached in synthesize
@@ -333,6 +424,7 @@ async function main() {
         console.log(`uploaded to Drive: ${fileName} (${buffer.length} bytes)`);
       }
       generated++;
+      regenerated.push(glyph);
     } catch (err) {
       if (isPermissionError(err)) {
         printPermissionDiagnostic(clientEmail);
@@ -350,6 +442,9 @@ async function main() {
   console.log(
     `\nGenerated ${generated}, skipped ${skipped} (already exist), failed ${failed}`,
   );
+  if (regenerated.length > 0) {
+    console.log(`Regenerated: ${regenerated.join(" ")}`);
+  }
   if (failed > 0) process.exitCode = 1;
 }
 

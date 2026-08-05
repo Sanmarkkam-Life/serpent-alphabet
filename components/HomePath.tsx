@@ -7,7 +7,7 @@ import {
   defaultProgress,
   isLessonComplete,
   isLessonUnlocked,
-  loadProgress,
+  runDailyRollover,
   setMute,
   type Progress,
 } from "@/lib/progress";
@@ -228,6 +228,14 @@ function TamilIntroNode({ viewed }: { viewed: boolean }) {
     >
       <IntroBadge icon="📖" viewed={viewed} wiggle={!viewed} />
       <IntroNodeLabel text="About Tamil" />
+      {!viewed && (
+        <span
+          className="mt-1 rounded-full bg-serpent px-2.5 py-0.5 font-ui text-xs font-extrabold text-forest-deep"
+          aria-hidden="true"
+        >
+          Start here
+        </span>
+      )}
     </Link>
   );
 }
@@ -273,13 +281,19 @@ function SoulLettersNode({
 export default function HomePath({ lessons }: HomePathProps) {
   // Default (server-matching) state: no progress yet.
   const [progress, setProgress] = useState<Progress>(defaultProgress());
+  const [dailyShieldSaved, setDailyShieldSaved] = useState(false);
 
   useEffect(() => {
-    setProgress(loadProgress());
+    // Opening the app is where a missed day is settled: a daily shield can
+    // absorb it and keep the 🔥 streak alive. Reassure the learner if it did.
+    const { progress: current, dailyShieldUsed } = runDailyRollover();
+    setProgress(current);
+    if (dailyShieldUsed) setDailyShieldSaved(true);
   }, []);
 
   const orderedIds = lessons.map((lesson) => lesson.id);
   const level = levelForXp(progress.xp);
+  const { streakCount, flawlessStreak, shields } = progress;
 
   const toggleMute = (): void => {
     setProgress(setMute(!progress.mute));
@@ -298,7 +312,28 @@ export default function HomePath({ lessons }: HomePathProps) {
 
   return (
     <div className="relative">
-      {/* Snake stats: level badge, lifetime XP, quiet streak, mute. */}
+      {/* A daily shield saved the 🔥 streak while the learner was away. */}
+      {dailyShieldSaved && (
+        <div
+          className="mb-4 flex items-center gap-2 rounded-2xl border-2 border-wisdom bg-wisdom-soft px-4 py-3"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="flex-1 font-ui text-sm font-bold text-wisdom-deep">
+            🛡️ Daily Shield used! Your 🔥 streak is safe.
+          </span>
+          <button
+            type="button"
+            onClick={() => setDailyShieldSaved(false)}
+            aria-label="Dismiss"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-wisdom-deep"
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+      )}
+
+      {/* Snake stats: level, lifetime XP, both streaks, shields, mute. */}
       <div className="mb-6 flex flex-wrap items-center justify-center gap-2">
         <span
           className="inline-flex items-center gap-1.5 rounded-full bg-sage-100 px-3.5 py-2 font-ui text-sm font-extrabold text-forest"
@@ -310,22 +345,51 @@ export default function HomePath({ lessons }: HomePathProps) {
         <span className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-3.5 py-2 font-ui text-sm font-extrabold text-forest">
           {progress.xp} XP
         </span>
-        {progress.flawlessStreak >= 1 && (
-          <span
-            className="inline-flex items-center gap-1 rounded-full bg-serpent-soft px-3.5 py-2 font-ui text-sm font-extrabold text-forest-deep"
-            aria-label={`Flawless streak: ${progress.flawlessStreak}`}
-          >
-            ⚡ {progress.flawlessStreak}
+
+        {/* Both streaks, side by side, in one cluster (each hidden at 0). */}
+        {(streakCount >= 1 || flawlessStreak >= 1) && (
+          <span className="inline-flex items-center gap-2.5 rounded-full bg-serpent-soft px-3.5 py-2 font-ui text-sm font-extrabold text-forest-deep">
+            {streakCount >= 1 && (
+              <span
+                className="whitespace-nowrap"
+                aria-label={`${streakCount} day streak`}
+              >
+                🔥 {streakCount}
+              </span>
+            )}
+            {flawlessStreak >= 1 && (
+              <span
+                className="whitespace-nowrap"
+                aria-label={`Flawless streak: ${flawlessStreak}`}
+              >
+                ⚡ {flawlessStreak}
+              </span>
+            )}
           </span>
         )}
-        {progress.streakCount >= 2 && (
-          <span
-            className="inline-flex items-center gap-1 rounded-full bg-serpent-soft px-3.5 py-2 font-ui text-sm font-extrabold text-forest-deep"
-            aria-label={`${progress.streakCount} day streak`}
-          >
-            🔥 {progress.streakCount}
+
+        {/* Shield inventory: shown only when at least one is owned. */}
+        {(shields.flawless >= 1 || shields.daily >= 1) && (
+          <span className="inline-flex items-center gap-2.5 rounded-full bg-wisdom-soft px-3.5 py-2 font-ui text-sm font-extrabold text-wisdom-deep">
+            {shields.flawless >= 1 && (
+              <span
+                className="whitespace-nowrap"
+                aria-label={`Flawless shields: ${shields.flawless}`}
+              >
+                🛡️⚡ {shields.flawless}
+              </span>
+            )}
+            {shields.daily >= 1 && (
+              <span
+                className="whitespace-nowrap"
+                aria-label={`Daily shields: ${shields.daily}`}
+              >
+                🛡️🔥 {shields.daily}
+              </span>
+            )}
           </span>
         )}
+
         <button
           type="button"
           onClick={toggleMute}

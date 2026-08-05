@@ -28,6 +28,44 @@ export function getStreakMultiplier(streak: number): number {
   return 2.0;
 }
 
+/**
+ * Daily-streak XP multiplier (tunable). Rewards consistency: no bonus for the
+ * first couple of days, then it ramps gently as the habit sticks.
+ * 3 -> 1.05x, 7 -> 1.1x, 14 -> 1.15x, 30+ -> 1.25x.
+ */
+export function getDailyStreakMultiplier(days: number): number {
+  if (days < 3) return 1.0;
+  if (days < 7) return 1.05;
+  if (days < 14) return 1.1;
+  if (days < 30) return 1.15;
+  return 1.25;
+}
+
+export interface StreakMultipliers {
+  flawlessMultiplier: number;
+  dailyMultiplier: number;
+  /** round(baseTotal * flawlessMultiplier * dailyMultiplier). */
+  finalTotal: number;
+}
+
+/**
+ * Combine both streak multipliers over a lesson's base XP total. The two are
+ * multiplicative and applied together, then rounded once. When both are 1.0
+ * the result equals the base total (no bonus).
+ */
+export function applyStreakMultipliers(
+  baseTotal: number,
+  flawlessStreak: number,
+  dailyStreakDays: number,
+): StreakMultipliers {
+  const flawlessMultiplier = getStreakMultiplier(flawlessStreak);
+  const dailyMultiplier = getDailyStreakMultiplier(dailyStreakDays);
+  const finalTotal = Math.round(
+    baseTotal * flawlessMultiplier * dailyMultiplier,
+  );
+  return { flawlessMultiplier, dailyMultiplier, finalTotal };
+}
+
 /** Format a Date as YYYY-MM-DD in the device's local time zone. */
 export function localDateString(date: Date): string {
   const y = date.getFullYear();
@@ -62,4 +100,49 @@ export function recordActiveDay(
     return { lastActiveDate: todayLocal, streakCount: streakCount + 1 };
   }
   return { lastActiveDate: todayLocal, streakCount: 1 };
+}
+
+/** Whole calendar days from `from` to `to` (DST-proof: pure date math). */
+export function daysBetween(from: string, to: string): number {
+  const [ay, am, ad] = from.split("-").map(Number);
+  const [by, bm, bd] = to.split("-").map(Number);
+  const a = Date.UTC(ay, am - 1, ad);
+  const b = Date.UTC(by, bm - 1, bd);
+  return Math.round((b - a) / 86_400_000);
+}
+
+export interface DailyRolloverResult {
+  streak: StreakInfo;
+  /** True when a daily shield absorbed exactly one missed day. */
+  dailyShieldUsed: boolean;
+}
+
+/**
+ * Daily-streak rollover, run when the app opens. A daily shield protects the
+ * streak against exactly ONE missed day:
+ * - No streak yet (null date or count 0), or no full day missed (gap <= 1):
+ *   nothing to do — a same-day or next-day open keeps the streak intact.
+ * - Exactly one full day missed (gap === 2) and a shield is owned: spend the
+ *   shield and advance the last-active date to the missed day, so the streak
+ *   count survives and today (or later) can continue it.
+ * - Otherwise (no shield, or more than one day missed for a single shield):
+ *   leave it untouched; recordActiveDay resets it naturally on next activity.
+ */
+export function applyDailyRollover(
+  streak: StreakInfo,
+  dailyShields: number,
+  todayLocal: string,
+): DailyRolloverResult {
+  const { lastActiveDate, streakCount } = streak;
+  if (lastActiveDate === null || streakCount <= 0) {
+    return { streak, dailyShieldUsed: false };
+  }
+  const gap = daysBetween(lastActiveDate, todayLocal);
+  if (gap === 2 && dailyShields > 0) {
+    return {
+      streak: { lastActiveDate: nextDay(lastActiveDate), streakCount },
+      dailyShieldUsed: true,
+    };
+  }
+  return { streak, dailyShieldUsed: false };
 }

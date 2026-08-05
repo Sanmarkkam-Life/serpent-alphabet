@@ -4,17 +4,18 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LessonImage } from "@/components/ui";
 import type { SnakeLevel } from "@/lib/levels";
+import type { ChestClaimResult, ShieldType } from "@/lib/progress";
 import type { TaskXp } from "@/lib/xp";
 import type { Lesson } from "@/lib/types";
 
 /**
  * Full-screen celebration once the mastery queue is empty. Confetti,
- * a proud snake, the end-of-lesson XP summary, and a door to the next
- * letter on the path.
+ * a proud snake, the end-of-lesson XP summary, a first-completion treasure
+ * chest, and a door to the next letter on the path.
  */
 
 export interface LessonSummary {
-  /** Base lesson XP (tasks + combo + time), before the streak multiplier. */
+  /** Base lesson XP (tasks + combo + time), before the streak multipliers. */
   xp: TaskXp;
   /** Highest combo multiplier reached. */
   bestCombo: number;
@@ -22,17 +23,25 @@ export interface LessonSummary {
   levelUp: SnakeLevel | null;
   flavor: "normal" | "review" | "testout";
   /** Flawless-streak XP multiplier applied to the lesson total (>= 1.0). */
-  streakMultiplier: number;
+  flawlessMultiplier: number;
+  /** Daily-streak XP multiplier applied to the lesson total (>= 1.0). */
+  dailyMultiplier: number;
   /** Flawless streak count at lesson end. */
   flawlessStreak: number;
-  /** Final XP after the streak multiplier (what was actually banked). */
+  /** Daily streak (days) at lesson end. */
+  dailyStreak: number;
+  /** Final XP after both multipliers (what was actually banked). */
   finalTotal: number;
+  /** Whether to offer a first-completion treasure chest on this screen. */
+  offerChest: boolean;
 }
 
 export interface CelebrationProps {
   lesson: Lesson;
   nextLesson: { id: string; glyph: string; phonetic: string } | null;
   summary: LessonSummary;
+  /** Claim this lesson's chest, returning what the pick yielded. */
+  onClaimShield?: (choice: ShieldType) => ChestClaimResult;
 }
 
 /** serpent / sage / wisdom / cream — the whole forest joins the party. */
@@ -84,10 +93,165 @@ function SummaryRow({ label, value }: { label: string; value: number }) {
   );
 }
 
+/** Trim trailing zeros so 1.50 shows as 1.5 and 1.05 stays 1.05. */
+function formatMultiplier(m: number): string {
+  return m.toFixed(2).replace(/\.?0+$/, "");
+}
+
+/** A streak-multiplier line (shown only when the multiplier is above 1.0). */
+function MultiplierRow({ label, multiplier }: { label: string; multiplier: number }) {
+  return (
+    <div className="flex items-center justify-between font-ui text-sm text-forest">
+      <span>{label}</span>
+      <span className="font-bold text-serpent-deep">
+        ×{formatMultiplier(multiplier)}
+      </span>
+    </div>
+  );
+}
+
+interface ShieldMeta {
+  type: ShieldType;
+  badge: string;
+  name: string;
+  blurb: string;
+}
+
+const SHIELD_META: Record<ShieldType, ShieldMeta> = {
+  flawless: {
+    type: "flawless",
+    badge: "🛡️⚡",
+    name: "Flawless Shield",
+    blurb: "Protects your flawless streak from one mistake.",
+  },
+  daily: {
+    type: "daily",
+    badge: "🛡️🔥",
+    name: "Daily Shield",
+    blurb: "Protects your daily streak if you miss a day.",
+  },
+};
+
+type ChestState = "closed" | "choose" | "claimed";
+
+/**
+ * First-completion reward. A closed chest the learner taps to open, then a
+ * deliberate choice between two shields. Opening/reveal animations are
+ * skipped under prefers-reduced-motion.
+ */
+function TreasureChest({
+  onClaimShield,
+}: {
+  onClaimShield: (choice: ShieldType) => ChestClaimResult;
+}) {
+  const [state, setState] = useState<ChestState>("closed");
+  const [claimed, setClaimed] = useState<{
+    meta: ShieldMeta;
+    result: ChestClaimResult;
+  } | null>(null);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    setReduceMotion(
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    );
+  }, []);
+
+  const anim = (cls: string) => (reduceMotion ? "" : cls);
+
+  const pick = (choice: ShieldType): void => {
+    const result = onClaimShield(choice);
+    setClaimed({ meta: SHIELD_META[choice], result });
+    setState("claimed");
+  };
+
+  if (state === "closed") {
+    return (
+      <button
+        type="button"
+        onClick={() => setState("choose")}
+        aria-label="Open the treasure chest"
+        className="w-full rounded-blob border-2 border-wisdom bg-wisdom-soft p-5 text-center shadow-leaf transition-transform active:scale-95"
+      >
+        <span className={`block text-6xl ${anim("animate-wiggle")}`} aria-hidden="true">
+          🎁
+        </span>
+        <span className="mt-2 block font-ui text-lg font-extrabold text-wisdom-deep">
+          A treasure chest appeared!
+        </span>
+        <span className="mt-1 block font-ui text-sm font-semibold text-forest-soft">
+          Tap to open
+        </span>
+      </button>
+    );
+  }
+
+  if (state === "choose") {
+    return (
+      <div className="w-full rounded-blob border-2 border-wisdom bg-wisdom-soft p-5 text-center shadow-leaf">
+        <span className={`block text-5xl ${anim("animate-pop-in")}`} aria-hidden="true">
+          🎉
+        </span>
+        <h2 className="mt-2 font-ui text-lg font-extrabold text-wisdom-deep">
+          Choose your shield
+        </h2>
+        <p className="mt-1 font-ui text-sm font-semibold text-forest-soft">
+          Pick one to keep. Shields protect a streak from a single slip.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {(["flawless", "daily"] as const).map((key) => {
+            const meta = SHIELD_META[key];
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => pick(key)}
+                aria-label={`${meta.name}. ${meta.blurb}`}
+                className="flex min-h-[132px] flex-col items-center justify-start gap-1.5 rounded-2xl border-2 border-sage-300 bg-cream-soft p-3 text-center transition-transform active:scale-95"
+              >
+                <span className="text-3xl" aria-hidden="true">
+                  {meta.badge}
+                </span>
+                <span className="font-ui text-sm font-extrabold text-forest">
+                  {meta.name}
+                </span>
+                <span className="font-ui text-xs font-semibold leading-snug text-forest-soft">
+                  {meta.blurb}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // claimed
+  const meta = claimed?.meta ?? SHIELD_META.flawless;
+  const atMax = claimed?.result === "max";
+  return (
+    <div
+      className={`w-full rounded-blob border-2 border-wisdom bg-wisdom-soft p-5 text-center shadow-leaf ${anim("animate-pop-in")}`}
+      role="status"
+      aria-live="polite"
+    >
+      <span className="block text-5xl" aria-hidden="true">
+        {meta.badge}
+      </span>
+      <p className="mt-2 font-ui text-base font-extrabold text-wisdom-deep">
+        {atMax
+          ? `Already at max. Your ${meta.name} stash is full!`
+          : `${meta.name} added to your inventory!`}
+      </p>
+    </div>
+  );
+}
+
 export default function Celebration({
   lesson,
   nextLesson,
   summary,
+  onClaimShield,
 }: CelebrationProps) {
   // Confetti is a brief burst: skipped entirely under prefers-reduced-motion,
   // and the whole layer unmounts once every piece has faded out, so nothing
@@ -167,34 +331,48 @@ export default function Celebration({
 
         {/* End-of-lesson XP summary */}
         <div className="w-full rounded-blob bg-cream-soft p-5 text-left shadow-leaf">
-          <div className="flex items-baseline justify-between">
+          <span className="font-ui text-lg font-extrabold text-forest">
+            XP earned
+          </span>
+          <div className="mt-3 space-y-1.5 border-t border-sage-200 pt-3">
+            <SummaryRow label="Base" value={summary.xp.base} />
+            <SummaryRow label="Combo bonus" value={summary.xp.comboBonus} />
+            <SummaryRow label="Time bonus" value={summary.xp.timeBonus} />
+            {summary.flawlessMultiplier > 1 && (
+              <MultiplierRow
+                label="Flawless ⚡"
+                multiplier={summary.flawlessMultiplier}
+              />
+            )}
+            {summary.dailyMultiplier > 1 && (
+              <MultiplierRow label="Daily 🔥" multiplier={summary.dailyMultiplier} />
+            )}
+          </div>
+          <div className="mt-2 flex items-baseline justify-between border-t border-sage-200 pt-3">
             <span className="font-ui text-lg font-extrabold text-forest">
-              XP earned
+              Total
             </span>
             <span className="font-ui text-2xl font-extrabold text-serpent-deep">
               +{summary.finalTotal}
             </span>
           </div>
-          <div className="mt-3 space-y-1.5 border-t border-sage-200 pt-3">
-            <SummaryRow label="Base" value={summary.xp.base} />
-            <SummaryRow label="Combo bonus" value={summary.xp.comboBonus} />
-            <SummaryRow label="Time bonus" value={summary.xp.timeBonus} />
-            {summary.streakMultiplier > 1 && (
-              <SummaryRow
-                label={`⚡ Streak x${summary.streakMultiplier.toFixed(1)}`}
-                value={summary.finalTotal - summary.xp.total}
-              />
-            )}
-            <div className="flex items-center justify-between font-ui text-sm text-forest">
+          <div className="mt-3 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between font-ui text-xs text-forest-soft">
               <span>Best combo</span>
-              <span className="font-bold">
-                x{summary.bestCombo.toFixed(1)}
-              </span>
+              <span className="font-bold">x{summary.bestCombo.toFixed(1)}</span>
             </div>
-            <div className="flex items-center justify-between font-ui text-sm text-forest">
-              <span>Flawless streak</span>
-              <span className="font-bold">⚡ {summary.flawlessStreak}</span>
-            </div>
+            {summary.flawlessStreak >= 1 && (
+              <div className="flex items-center justify-between font-ui text-xs text-forest-soft">
+                <span>Flawless streak</span>
+                <span className="font-bold">⚡ {summary.flawlessStreak}</span>
+              </div>
+            )}
+            {summary.dailyStreak >= 1 && (
+              <div className="flex items-center justify-between font-ui text-xs text-forest-soft">
+                <span>Daily streak</span>
+                <span className="font-bold">🔥 {summary.dailyStreak}</span>
+              </div>
+            )}
           </div>
           {summary.levelUp !== null && (
             <div className="mt-4 animate-pop-in rounded-2xl bg-wisdom-soft px-4 py-3 text-center">
@@ -205,6 +383,11 @@ export default function Celebration({
             </div>
           )}
         </div>
+
+        {/* First-completion treasure chest: choose one streak shield. */}
+        {summary.offerChest && onClaimShield && (
+          <TreasureChest onClaimShield={onClaimShield} />
+        )}
 
         {nextLesson !== null ? (
           <div className="flex w-full flex-col items-center gap-4">
