@@ -1,6 +1,6 @@
 "use client";
 
-import { recordActiveDay, localDateString } from "./streak";
+import { applyDailyRollover, recordActiveDay, localDateString } from "./streak";
 
 /**
  * Learner progress, persisted in localStorage under a versioned key.
@@ -9,10 +9,25 @@ import { recordActiveDay, localDateString } from "./streak";
  * v2 adds gamification fields on top of v1's completed-lesson list.
  * On first load after the upgrade, v1 is migrated into v2 and left in
  * place untouched as a backup. All writes go to v2.
+ *
+ * v5 adds streak shields and chest-claim tracking. These are additive: they
+ * default cleanly on any older payload, so there is NO storage version bump.
  */
 
 export const PROGRESS_KEY = "serpent_progress_v2";
 export const LEGACY_PROGRESS_KEY_V1 = "serpent_progress_v1";
+
+/** Each shield type stacks up to this many. */
+export const SHIELD_CAP = 3;
+
+export type ShieldType = "flawless" | "daily";
+
+export interface ShieldInventory {
+  /** Absorbs one mistake before the flawless streak would reset. */
+  flawless: number;
+  /** Absorbs one missed day before the daily streak would reset. */
+  daily: number;
+}
 
 export interface Progress {
   /** Lesson ids that have been fully mastered, in completion order. */
@@ -45,6 +60,16 @@ export interface Progress {
    * Distinct from the per-lesson combo. Additive field, defaults to 0.
    */
   flawlessStreak: number;
+  /**
+   * Consumable streak shields won from treasure chests. Additive v5 field:
+   * older payloads without it default to { flawless: 0, daily: 0 }.
+   */
+  shields: ShieldInventory;
+  /**
+   * Lesson ids whose treasure chest has already been opened. Each lesson
+   * grants a chest exactly once. Additive v5 field, defaults to [].
+   */
+  chestClaimedLessons: string[];
 }
 
 export function defaultProgress(): Progress {
@@ -57,11 +82,33 @@ export function defaultProgress(): Progress {
     introViewed: false,
     tamilIntroViewed: false,
     flawlessStreak: 0,
+    shields: { flawless: 0, daily: 0 },
+    chestClaimedLessons: [],
   };
 }
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((v) => typeof v === "string");
+}
+
+/** Coerce one shield count to an integer within [0, SHIELD_CAP]. */
+function normalizeShieldCount(value: unknown): number {
+  if (typeof value === "number" && Number.isInteger(value) && value >= 0) {
+    return Math.min(SHIELD_CAP, value);
+  }
+  return 0;
+}
+
+/** Coerce anything into a valid, capped shield inventory. */
+export function normalizeShields(value: unknown): ShieldInventory {
+  const obj =
+    typeof value === "object" && value !== null
+      ? (value as Record<string, unknown>)
+      : {};
+  return {
+    flawless: normalizeShieldCount(obj.flawless),
+    daily: normalizeShieldCount(obj.daily),
+  };
 }
 
 /**
@@ -109,6 +156,10 @@ export function normalizeProgress(raw: unknown): Progress {
       obj.flawlessStreak >= 0
         ? obj.flawlessStreak
         : base.flawlessStreak,
+    shields: normalizeShields(obj.shields),
+    chestClaimedLessons: isStringArray(obj.chestClaimedLessons)
+      ? obj.chestClaimedLessons
+      : base.chestClaimedLessons,
   };
 }
 
@@ -160,6 +211,61 @@ export function saveProgress(progress: Progress): void {
   } catch {
     // Storage full or unavailable; the session still works in memory.
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Pure state transitions (shields + chests) — unit-testable, no I/O   */
+/* ------------------------------------------------------------------ */
+
+/** Add one shield of `type`, honouring the stack cap. */
+export function grantShield(
+  shields: ShieldInventory,
+  type: ShieldType,
+): { shields: ShieldInventory; added: boolean } {
+  if (shields[type] >= SHIELD_CAP) return { shields, added: false };
+  return { shields: { ...shields, [type]: shields[type] + 1 }, added: true };
+}
+
+export type ChestClaimResult = "added" | "max" | "already";
+
+/**
+ * Open a lesson's chest and take one shield. A lesson's chest can be opened
+ * only once ("already"); a pick at the stack cap still claims the chest but
+ * grants nothing ("max").
+ */
+export function applyChestClaim(
+  progress: Progress,
+  lessonId: string,
+  choice: ShieldType,
+): { progress: Progress; result: ChestClaimResult } {
+  if (progress.chestClaimedLessons.includes(lessonId)) {
+    return { progress, result: "already" };
+  }
+  const { shields, added } = grantShield(progress.shields, choice);
+  const next: Progress = {
+    ...progress,
+    shields,
+    chestClaimedLessons: [...progress.chestClaimedLessons, lessonId],
+  };
+  return { progress: next, result: added ? "added" : "max" };
+}
+
+/**
+ * Resolve a mistake against the flawless streak. A flawless shield absorbs
+ * the hit (streak preserved, shield spent); otherwise the streak resets to 0.
+ */
+export function resolveFlawlessMistake(
+  shields: ShieldInventory,
+  flawlessStreak: number,
+): { shields: ShieldInventory; flawlessStreak: number; shieldUsed: boolean } {
+  if (shields.flawless > 0) {
+    return {
+      shields: { ...shields, flawless: shields.flawless - 1 },
+      flawlessStreak,
+      shieldUsed: true,
+    };
+  }
+  return { shields, flawlessStreak: 0, shieldUsed: false };
 }
 
 /* ------------------------------------------------------------------ */
@@ -250,6 +356,62 @@ export function resetFlawlessStreak(): Progress {
   return next;
 }
 
+/**
+ * Spend one flawless shield if any are owned. Returns whether a shield was
+ * actually consumed so the caller can choose between "streak saved" and the
+ * normal reset.
+ */
+export function consumeFlawlessShield(): { progress: Progress; used: boolean } {
+  const progress = loadProgress();
+  if (progress.shields.flawless <= 0) return { progress, used: false };
+  const next: Progress = {
+    ...progress,
+    shields: { ...progress.shields, flawless: progress.shields.flawless - 1 },
+  };
+  saveProgress(next);
+  return { progress: next, used: true };
+}
+
+/**
+ * Open a lesson's treasure chest and bank the chosen shield. Idempotent per
+ * lesson: a second call for the same lesson is a no-op ("already").
+ */
+export function claimChest(
+  lessonId: string,
+  choice: ShieldType,
+): { progress: Progress; result: ChestClaimResult } {
+  const progress = loadProgress();
+  const { progress: next, result } = applyChestClaim(progress, lessonId, choice);
+  if (result !== "already") saveProgress(next);
+  return { progress: next, result };
+}
+
+/**
+ * Run the daily-streak rollover on app open. If a full day was missed and a
+ * daily shield is owned, spend it to keep the 🔥 streak alive and report it so
+ * the UI can reassure the learner.
+ */
+export function runDailyRollover(
+  now: Date = new Date(),
+): { progress: Progress; dailyShieldUsed: boolean } {
+  const progress = loadProgress();
+  const today = localDateString(now);
+  const { streak, dailyShieldUsed } = applyDailyRollover(
+    { lastActiveDate: progress.lastActiveDate, streakCount: progress.streakCount },
+    progress.shields.daily,
+    today,
+  );
+  if (!dailyShieldUsed) return { progress, dailyShieldUsed: false };
+  const next: Progress = {
+    ...progress,
+    lastActiveDate: streak.lastActiveDate,
+    streakCount: streak.streakCount,
+    shields: { ...progress.shields, daily: progress.shields.daily - 1 },
+  };
+  saveProgress(next);
+  return { progress: next, dailyShieldUsed: true };
+}
+
 export function setMute(mute: boolean): Progress {
   const progress = loadProgress();
   if (progress.mute === mute) return progress;
@@ -264,6 +426,11 @@ export function setMute(mute: boolean): Progress {
 
 export function isLessonComplete(progress: Progress, lessonId: string): boolean {
   return progress.completed.includes(lessonId);
+}
+
+/** True once this lesson's treasure chest has been opened. */
+export function isChestClaimed(progress: Progress, lessonId: string): boolean {
+  return progress.chestClaimedLessons.includes(lessonId);
 }
 
 /**
