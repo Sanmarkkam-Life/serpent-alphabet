@@ -1,0 +1,18 @@
+{
+  "id": "na",
+  "order": 20,
+  "glyph": "ந",
+  "phonetic": "Na! (tongue at the teeth)",
+  "image": "/letters/ந.png",
+  "peculiarities": "ந is the 'n' made at the teeth, த's partner. It usually begins a word, as in நன்றி (nandri, thank you).\n\nIts shape is close to த; watch for the extra curl.",
+  "vallalar_note": null,
+  "audio": "/audio/ந.mp3",
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "த",
+    "ன",
+    "ண"
+  ]
+}

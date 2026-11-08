@@ -1,0 +1,18 @@
+{
+  "id": "nna2",
+  "order": 30,
+  "glyph": "ன",
+  "phonetic": "Na! (tongue on the ridge)",
+  "image": "/letters/ன.png",
+  "peculiarities": "ன is the last of the eighteen body letters: an 'n' with the tongue on the ridge just behind the teeth. It rarely starts a word but often ends one, as in அவன் (avan, he).\n\nYou have now met all three 'n' letters: ண, ந and ன.",
+  "vallalar_note": null,
+  "audio": "/audio/ன.mp3",
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ண",
+    "ந",
+    "ள"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "pa",
+  "order": 21,
+  "glyph": "ப",
+  "phonetic": "Pa!",
+  "image": "/letters/ப.png",
+  "peculiarities": "ப is 'pa'. Between vowels it softens toward 'ba'.\n\nIts shape is one of the simplest: an open cup. Notice how close it is to ம; the difference is the little loop.",
+  "vallalar_note": null,
+  "audio": "/audio/ப.mp3",
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ம",
+    "ட",
+    "ய"
+  ]
+}

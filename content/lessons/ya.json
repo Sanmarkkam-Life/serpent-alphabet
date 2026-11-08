@@ -1,0 +1,18 @@
+{
+  "id": "ya",
+  "order": 23,
+  "glyph": "ய",
+  "phonetic": "Ya!",
+  "image": "/letters/ய.png",
+  "peculiarities": "ய is 'ya', as in 'yard'. A soft, gliding sound.\n\nIts shape is a cousin of ம and ப; keep an eye on the middle stroke.",
+  "vallalar_note": null,
+  "audio": "/audio/ய.mp3",
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ம",
+    "ப",
+    "வ"
+  ]
+}

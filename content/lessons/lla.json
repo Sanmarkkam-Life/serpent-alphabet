@@ -1,0 +1,18 @@
+{
+  "id": "lla",
+  "order": 28,
+  "glyph": "ள",
+  "phonetic": "Ḷa! (tongue curled back)",
+  "image": "/letters/ள.png",
+  "peculiarities": "ள is an 'l' made with the tongue curled back to touch the roof of the mouth, the 'l' cousin of ட and ண.\n\nCompare all three: ல (at the teeth), ள (curled back, touching), ழ (curled back, not touching).",
+  "vallalar_note": null,
+  "audio": "/audio/ள.mp3",
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ல",
+    "ழ",
+    "ன"
+  ]
+}

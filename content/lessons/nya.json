@@ -1,0 +1,18 @@
+{
+  "id": "nya",
+  "order": 16,
+  "glyph": "ஞ",
+  "phonetic": "Nya!",
+  "image": "/letters/ஞ.png",
+  "peculiarities": "ஞ is the 'ny' sound in 'canyon'. It is one of the rarer letters, and it usually sits just before ச, its partner.\n\nIts shape has several turns, so take your time tracing it; you get a little extra time for this one.",
+  "vallalar_note": null,
+  "audio": "/audio/ஞ.mp3",
+  "trace_path": [],
+  "trace_time_limit": 15,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ங",
+    "ஜ",
+    "ச"
+  ]
+}

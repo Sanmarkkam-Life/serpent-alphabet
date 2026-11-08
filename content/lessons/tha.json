@@ -1,0 +1,18 @@
+{
+  "id": "tha",
+  "order": 19,
+  "glyph": "த",
+  "phonetic": "Tha! (tongue at the teeth)",
+  "image": "/letters/த.png",
+  "peculiarities": "த is a soft 't' made with the tongue touching the back of the upper teeth, gentler than the English 't'. It is the second of Tamil's two 't' sounds.\n\nBetween vowels it softens toward 'd'. Compare it with ட: one touches the teeth, the other curls back.",
+  "vallalar_note": null,
+  "audio": "/audio/த.mp3",
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ந",
+    "ட",
+    "க"
+  ]
+}

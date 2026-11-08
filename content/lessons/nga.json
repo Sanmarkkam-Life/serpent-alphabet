@@ -1,0 +1,18 @@
+{
+  "id": "nga",
+  "order": 14,
+  "glyph": "ங",
+  "phonetic": "Nga!",
+  "image": "/letters/ங.png",
+  "peculiarities": "ங is the 'ng' sound at the end of 'sing', with a soft 'a' after it.\n\nIt almost never begins a word. It lives just before க, as in தங்கம் (thangam, gold). Think of it as க's quiet partner, humming through the nose.",
+  "vallalar_note": null,
+  "audio": "/audio/ங.mp3",
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ஞ",
+    "க",
+    "ந"
+  ]
+}

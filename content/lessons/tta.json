@@ -1,0 +1,18 @@
+{
+  "id": "tta",
+  "order": 17,
+  "glyph": "ட",
+  "phonetic": "Ṭa! (tongue curled back)",
+  "image": "/letters/ட.png",
+  "peculiarities": "ட is a 't' made with the tip of the tongue curled back to touch the roof of the mouth. Tamil has two 't' sounds, and this is the strong, 'curled' one.\n\nA simple shape: a line and a turn. Say it, and feel your tongue curl back.",
+  "vallalar_note": null,
+  "audio": "/audio/ட.mp3",
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ப",
+    "ம",
+    "த"
+  ]
+}

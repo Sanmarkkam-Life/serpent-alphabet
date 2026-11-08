@@ -1,0 +1,18 @@
+{
+  "id": "nna",
+  "order": 18,
+  "glyph": "ண",
+  "phonetic": "Ṇa! (tongue curled back)",
+  "image": "/letters/ண.png",
+  "peculiarities": "ண is an 'n' made with the tongue curled back, the same place as ட. It is ட's nasal partner, as in கண் (kaṇ, eye).\n\nTamil has three 'n' letters: ண (curled back), ந (tongue at the teeth) and ன (tongue on the ridge behind the teeth). Here you meet the first.",
+  "vallalar_note": null,
+  "audio": "/audio/ண.mp3",
+  "trace_path": [],
+  "trace_time_limit": 15,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ன",
+    "ந",
+    "ள"
+  ]
+}

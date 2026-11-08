@@ -1,0 +1,18 @@
+{
+  "id": "va",
+  "order": 26,
+  "glyph": "வ",
+  "phonetic": "Va!",
+  "image": "/letters/வ.png",
+  "peculiarities": "வ sits between 'v' and 'w'; the lips barely touch. It begins வள்ளலார் (Vallalar).\n\nIt looks a lot like ல. Notice how the two differ as you trace them.",
+  "vallalar_note": null,
+  "audio": "/audio/வ.mp3",
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ல",
+    "ள",
+    "ம"
+  ]
+}

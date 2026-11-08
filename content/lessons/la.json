@@ -1,0 +1,18 @@
+{
+  "id": "la",
+  "order": 25,
+  "glyph": "ல",
+  "phonetic": "La! (tongue at the teeth)",
+  "image": "/letters/ல.png",
+  "peculiarities": "ல is a light 'l', with the tongue touching just behind the upper teeth, as in 'love'.\n\nTamil has three 'l' sounds: ல, ள and ழ. Start with this one, the plainest.",
+  "vallalar_note": null,
+  "audio": "/audio/ல.mp3",
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ள",
+    "வ",
+    "ழ"
+  ]
+}

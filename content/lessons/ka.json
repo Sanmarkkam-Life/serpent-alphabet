@@ -1,0 +1,18 @@
+{
+  "id": "ka",
+  "order": 13,
+  "glyph": "க",
+  "phonetic": "Ka!",
+  "image": "/letters/க.png",
+  "peculiarities": "க is the body க் given the soul அ: the sound 'ka', as in 'karma'. It is the first of the eighteen body letters.\n\nAt the start of a word it is a clean, hard 'k'. Between two vowels it often softens toward 'g' or 'h', so the same letter can sound a little different in different words. Listen to the teacher and let your ear learn it.",
+  "vallalar_note": null,
+  "audio": "/audio/க.mp3",
+  "trace_path": [],
+  "trace_time_limit": 12,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ச",
+    "ங",
+    "ட"
+  ]
+}

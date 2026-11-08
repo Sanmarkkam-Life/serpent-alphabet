@@ -1,0 +1,18 @@
+{
+  "id": "zha",
+  "order": 27,
+  "glyph": "ழ",
+  "phonetic": "Zha! (the Tamil sound)",
+  "image": "/letters/ழ.png",
+  "peculiarities": "ழ is the jewel of the Tamil alphabet, a sound few other languages have. Curl the tongue far back, without touching, and let the sound flow between an 'r' and an 'l'. It is in the very name of the language: தமிழ் (Tamiḻ).\n\nIt takes practice, even for many native speakers. Listen to the teacher many times, and be patient with yourself.",
+  "vallalar_note": null,
+  "audio": "/audio/ழ.mp3",
+  "trace_path": [],
+  "trace_time_limit": 15,
+  "trace_tolerance": 40,
+  "distractors": [
+    "ள",
+    "ல",
+    "ற"
+  ]
+}
