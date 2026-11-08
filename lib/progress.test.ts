@@ -29,6 +29,7 @@ describe("migrateV1ToV2", () => {
       shields: { flawless: 0, daily: 0 },
       chestClaimedLessons: [],
       lessonsSinceChest: 0,
+      reviews: {},
     });
   });
 
@@ -59,6 +60,7 @@ describe("normalizeProgress", () => {
       shields: { flawless: 2, daily: 1 },
       chestClaimedLessons: ["a"],
       lessonsSinceChest: 4,
+      reviews: { a: { step: 1, due: "2026-11-12" } },
     };
     expect(normalizeProgress(valid)).toEqual(valid);
   });

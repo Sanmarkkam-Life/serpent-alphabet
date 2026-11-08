@@ -6,15 +6,31 @@ like a native app, runs entirely in the browser (no backend, no accounts),
 and every letter is a data file, so the alphabet grows without code changes.
 
 The learner walks a winding jungle path: first two short intro cards, then
-the twelve vowels, each mastered through a small set of tasks before the
-next letter unlocks.
+the twelve vowels, then the "Body Letters" card and the eighteen consonants,
+each mastered through a small set of tasks before the next letter unlocks.
 
-## Quick start
+## Where it lives (HQ PC)
+
+The project folder is on Google Drive: `Sanmarkkam Life International TamiLearn App`.
+Edit files there. The 20,000+ helper files (`node_modules`) must never go on
+Drive, so the app runs from a local copy at `%USERPROFILE%Dev	amilearn-run`.
+`scripts/run-local.ps1` copies the Drive folder there (one way), installs
+what is missing, then runs the app:
+
+```powershell
+.scriptsun-local.ps1          # http://localhost:3000
+.scriptsun-local.ps1 test     # unit tests
+.scriptsun-local.ps1 build    # production build (must pass cleanly)
+```
+
+Never put `.env.local` (API keys) in the Drive folder.
+
+## Quick start (any other computer)
 
 ```bash
 npm install
 npm run dev      # http://localhost:3000
-npm test         # vitest: mastery queue, XP, streak, trace, validators
+npm test         # vitest: mastery queue, XP, streak, trace, review, validators
 npm run build    # production build (must pass cleanly)
 ```
 
@@ -25,7 +41,7 @@ npm run build    # production build (must pass cleanly)
 2. **The Soul Letters** (`/intro`): introduces vowels (உயிர், the soul) and
    consonants (மெய், the body). Viewing it unlocks the first letter.
 3. **Letters**: each runs a **mastery queue** of tasks:
-   `learn → pronounce → trace → recognize ×3`.
+   `learn → pronounce → trace → recognize ×2 → draw`.
 
 ### Mastery rules
 
@@ -47,6 +63,10 @@ task. The pure engine lives in `lib/masteryQueue.ts` (unit-tested).
   below.
 - **Recognize**: "Which is the correct one?", cued by the sound (a speaker
   button + the phonetic), choosing the glyph from a shuffled 2×2 grid.
+- **Draw from memory**: the last recall round. The learner hears the cue
+  (the phonetic) and draws the letter with the guide hidden; only the start
+  dot shows. A little more time and a wider corridor than Trace. A miss
+  reveals the letter to study before the retry.
 
 ### Rewards
 
@@ -62,6 +82,11 @@ task. The pure engine lives in `lib/masteryQueue.ts` (unit-tested).
   lesson: pass one trace + one recognize first try to skip ahead.
 - **Review**: completed letters replay at half XP without affecting
   progress.
+- **Spaced review**: a finished letter comes back for review after 1 day;
+  each clean review pushes it out to 3 days, 1 week, 2 weeks, then it is
+  mastered. A review with a mistake starts it over at 1 day. Due letters
+  show in a card at the top of the home screen. Pure logic in
+  `lib/review.ts`.
 
 Progress (completed letters, XP, level, streaks, mute, intro flags) lives
 in `localStorage` under `serpent_progress_v2`; v1 data migrates

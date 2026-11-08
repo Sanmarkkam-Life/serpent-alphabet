@@ -29,7 +29,7 @@ describe("masteryQueue", () => {
       "trace",
       "recognize-1",
       "recognize-2",
-      "recognize-3",
+      "draw",
     ]);
     expect(state.queue.every((t) => t.passesNeeded === 1)).toBe(true);
     expect(isComplete(state)).toBe(false);
@@ -86,7 +86,7 @@ describe("masteryQueue", () => {
     let state = createInitialState();
     for (let i = 0; i < 3; i++) state = passCurrent(state);
     state = failCurrent(state); // recognize-1 fails
-    for (let i = 0; i < 2; i++) state = passCurrent(state); // recognize-2, -3
+    for (let i = 0; i < 2; i++) state = passCurrent(state); // recognize-2, draw
     expect(isComplete(state)).toBe(false); // recognize-1 still owes 2 passes
     expect(remainingPasses(state)).toBe(2);
     state = passCurrent(state);

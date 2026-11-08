@@ -12,6 +12,8 @@ import {
   type Progress,
 } from "@/lib/progress";
 import { VOWEL_IDS, isConsonantId, isVowelId } from "@/lib/sections";
+import { dueLessonIds } from "@/lib/review";
+import { localDateString } from "@/lib/streak";
 
 /**
  * The winding jungle trail of lesson nodes on the home screen.
@@ -370,6 +372,12 @@ export default function HomePath({ lessons }: HomePathProps) {
   const orderedIds = lessons.map((lesson) => lesson.id);
   const level = levelForXp(progress.xp);
   const { streakCount, flawlessStreak, shields } = progress;
+  // Letters due for spaced review today (only after mount: dates are local).
+  const dueLessons = loaded
+    ? dueLessonIds(progress.reviews, localDateString(new Date()), orderedIds)
+        .map((id) => lessons.find((l) => l.id === id))
+        .filter((l): l is (typeof lessons)[number] => l !== undefined)
+    : [];
 
   const toggleMute = (): void => {
     setProgress(setMute(!progress.mute));
@@ -547,6 +555,33 @@ export default function HomePath({ lessons }: HomePathProps) {
           <span aria-hidden="true">{progress.mute ? "🔇" : "🔉"}</span>
         </button>
       </div>
+
+      {/* Spaced review: finished letters that are due again today. */}
+      {dueLessons.length > 0 && (
+        <div className="mx-auto mb-4 max-w-md rounded-2xl border-2 border-serpent bg-serpent-soft px-4 py-3">
+          <p className="font-ui text-sm font-extrabold text-forest-deep">
+            <span aria-hidden="true">🔁</span>{" "}
+            {dueLessons.length === 1
+              ? "1 letter is ready for review"
+              : `${dueLessons.length} letters are ready for review`}
+          </p>
+          <p className="mt-0.5 font-ui text-xs text-forest">
+            A quick review keeps each letter in your memory.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {dueLessons.map((lesson) => (
+              <Link
+                key={lesson.id}
+                href={`/lesson/${lesson.id}`}
+                aria-label={`Review ${lesson.phonetic}`}
+                className="flex h-12 min-w-[48px] items-center justify-center rounded-xl bg-cream-soft px-3 font-tamil text-2xl font-bold text-forest shadow-leaf"
+              >
+                {lesson.glyph}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* The winding trail, grouped into labelled sections. */}
       {sections.map((section) => (

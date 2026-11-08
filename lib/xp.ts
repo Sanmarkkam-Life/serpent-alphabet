@@ -25,6 +25,10 @@ export const COMBO_MAX = 3.0;
 export const RECOGNIZE_PAR_SECONDS = 5;
 /** Trace par: 60% of the lesson's trace time limit. */
 export const TRACE_PAR_FRACTION = 0.6;
+/** Draw-from-memory gets this multiple of the trace time limit. */
+export const DRAW_TIME_FACTOR = 1.5;
+/** Draw-from-memory widens the corridor by this factor (no guide shown). */
+export const DRAW_TOLERANCE_FACTOR = 1.25;
 /** Time bonus tops out at +50% of the task's base XP. */
 export const TIME_BONUS_MAX_FRACTION = 0.5;
 
@@ -50,6 +54,8 @@ export function parTimeSeconds(
   traceTimeLimit: number,
 ): number | null {
   if (type === "trace") return traceTimeLimit * TRACE_PAR_FRACTION;
+  if (type === "draw")
+    return traceTimeLimit * DRAW_TIME_FACTOR * TRACE_PAR_FRACTION;
   if (type === "recognize") return RECOGNIZE_PAR_SECONDS;
   return null;
 }

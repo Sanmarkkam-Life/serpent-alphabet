@@ -3,6 +3,12 @@
 import { applyDailyRollover, recordActiveDay, localDateString } from "./streak";
 import { evaluateChest } from "./chest";
 import { isConsonantId } from "./sections";
+import {
+  normalizeReviewSchedule,
+  scheduleAfterLearn,
+  scheduleAfterReview,
+  type ReviewSchedule,
+} from "./review";
 
 /**
  * Learner progress, persisted in localStorage under a versioned key.
@@ -84,6 +90,12 @@ export interface Progress {
    * Additive v6 field, defaults to 0. See lib/chest.ts.
    */
   lessonsSinceChest: number;
+  /**
+   * Spaced-repetition schedule for finished letters (see lib/review.ts).
+   * Additive field, defaults to {}. Letters finished before reviews existed
+   * are not backfilled, so nobody is flooded with reviews on upgrade.
+   */
+  reviews: ReviewSchedule;
 }
 
 export function defaultProgress(): Progress {
@@ -100,6 +112,7 @@ export function defaultProgress(): Progress {
     shields: { flawless: 0, daily: 0 },
     chestClaimedLessons: [],
     lessonsSinceChest: 0,
+    reviews: {},
   };
 }
 
@@ -187,6 +200,7 @@ export function normalizeProgress(raw: unknown): Progress {
       obj.lessonsSinceChest >= 0
         ? obj.lessonsSinceChest
         : base.lessonsSinceChest,
+    reviews: normalizeReviewSchedule(obj.reviews),
   };
 }
 
@@ -305,6 +319,34 @@ export function markLessonComplete(lessonId: string): Progress {
   const next: Progress = {
     ...progress,
     completed: [...progress.completed, lessonId],
+    reviews: scheduleAfterLearn(
+      progress.reviews,
+      lessonId,
+      localDateString(new Date()),
+    ),
+  };
+  saveProgress(next);
+  return next;
+}
+
+/**
+ * A review run of a finished letter ended. Clean (no mistakes) moves its next
+ * review further out; any mistake brings it back tomorrow.
+ */
+export function recordReview(
+  lessonId: string,
+  clean: boolean,
+  now: Date = new Date(),
+): Progress {
+  const progress = loadProgress();
+  const next: Progress = {
+    ...progress,
+    reviews: scheduleAfterReview(
+      progress.reviews,
+      lessonId,
+      localDateString(now),
+      clean,
+    ),
   };
   saveProgress(next);
   return next;

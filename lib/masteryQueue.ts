@@ -32,7 +32,8 @@ export const INITIAL_TASK_PLAN: ReadonlyArray<{ key: string; type: TaskType }> =
     { key: "trace", type: "trace" },
     { key: "recognize-1", type: "recognize" },
     { key: "recognize-2", type: "recognize" },
-    { key: "recognize-3", type: "recognize" },
+    // Third recall round: draw the letter with the guide hidden.
+    { key: "draw", type: "draw" },
   ];
 
 export function createInitialState(): MasteryQueueState {

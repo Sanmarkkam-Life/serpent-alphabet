@@ -37,7 +37,7 @@ export interface Lesson {
   distractors: string[];
 }
 
-export type TaskType = "learn" | "pronounce" | "trace" | "recognize";
+export type TaskType = "learn" | "pronounce" | "trace" | "recognize" | "draw";
 
 /** One entry in the mastery queue. Recognize appears three times. */
 export interface MasteryTask {

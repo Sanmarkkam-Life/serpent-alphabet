@@ -30,6 +30,7 @@ import {
   isLessonComplete,
   loadProgress,
   markLessonComplete,
+  recordReview,
   recordTaskActivity,
   resetFlawlessStreak,
   setMute,
@@ -88,6 +89,7 @@ const FAIL_MESSAGES: Record<TaskType, string> = {
   pronounce: "Almost! Your snake wants one more try",
   trace: "The snake slipped! Try again",
   recognize: "Not that one. Look again!",
+  draw: "Almost! Look at the shape, then draw it again",
 };
 
 const GENERIC_FAIL_MESSAGE = "Oops! The snake lost its place. One more look!";
@@ -114,6 +116,8 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
     remainingPasses(createInitialState()),
   );
   const [failedType, setFailedType] = useState<TaskType | null>(null);
+  /** Any mistake in this run; a clean review pushes the next one further out. */
+  const hadMistakeRef = useRef(false);
 
   // Gamification state
   const [combo, setCombo] = useState(COMBO_START);
@@ -245,6 +249,8 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
     if (mode === "normal") {
       markLessonComplete(lesson.id);
       setChestEarned(grantChestOnCompletion().chestEarned);
+    } else {
+      recordReview(lesson.id, !hadMistakeRef.current);
     }
     feedbackFanfare();
     setSummary(
@@ -298,6 +304,7 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
   const handleFail = (): void => {
     if (view !== "task" || isComplete(queueState)) return;
     setFailedType(currentTask(queueState)?.type ?? null);
+    hadMistakeRef.current = true;
     setCombo(comboAfterFail());
     breakStreak();
     feedbackFail();
@@ -413,6 +420,8 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
         return <TraceTask key={key} {...shared} />;
       case "recognize":
         return <RecognizeTask key={key} {...shared} />;
+      case "draw":
+        return <TraceTask key={key} {...shared} fromMemory />;
     }
   };
 
