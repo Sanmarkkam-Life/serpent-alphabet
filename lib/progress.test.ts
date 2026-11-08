@@ -23,9 +23,12 @@ describe("migrateV1ToV2", () => {
       // Anyone with completed lessons has effectively seen both intros.
       introViewed: true,
       tamilIntroViewed: true,
+      // The Body Letters intro is new v6 content: not backfilled.
+      bodyIntroViewed: false,
       flawlessStreak: 0,
       shields: { flawless: 0, daily: 0 },
       chestClaimedLessons: [],
+      lessonsSinceChest: 0,
     });
   });
 
@@ -51,9 +54,11 @@ describe("normalizeProgress", () => {
       mute: true,
       introViewed: true,
       tamilIntroViewed: true,
+      bodyIntroViewed: true,
       flawlessStreak: 7,
       shields: { flawless: 2, daily: 1 },
       chestClaimedLessons: ["a"],
+      lessonsSinceChest: 4,
     };
     expect(normalizeProgress(valid)).toEqual(valid);
   });
@@ -157,6 +162,33 @@ describe("normalizeProgress", () => {
     expect(norm.shields).toEqual({ flawless: SHIELD_CAP, daily: 0 });
     expect(norm.chestClaimedLessons).toEqual([]);
   });
+
+  it("defaults the v6 fields and never backfills bodyIntroViewed", () => {
+    // A v5 user who finished every vowel: consonants are new, so the Body
+    // Letters intro is unseen (false) and the chest counter starts at 0.
+    const v5user = {
+      ...defaultProgress(),
+      completed: ["a", "aa", "i"],
+      introViewed: true,
+      tamilIntroViewed: true,
+    } as Record<string, unknown>;
+    delete v5user.bodyIntroViewed;
+    delete v5user.lessonsSinceChest;
+    const norm = normalizeProgress(v5user);
+    expect(norm.bodyIntroViewed).toBe(false);
+    expect(norm.lessonsSinceChest).toBe(0);
+  });
+
+  it("rejects a negative or fractional lessonsSinceChest", () => {
+    expect(
+      normalizeProgress({ ...defaultProgress(), lessonsSinceChest: -1 })
+        .lessonsSinceChest,
+    ).toBe(0);
+    expect(
+      normalizeProgress({ ...defaultProgress(), lessonsSinceChest: 2.5 })
+        .lessonsSinceChest,
+    ).toBe(0);
+  });
 });
 
 describe("grantShield", () => {
@@ -241,5 +273,40 @@ describe("isLessonUnlocked", () => {
     };
     expect(isLessonUnlocked(progress, IDS, "aa")).toBe(true);
     expect(isLessonUnlocked(progress, IDS, "i")).toBe(false);
+  });
+});
+
+describe("isLessonUnlocked: consonant gate", () => {
+  // A minimal path: two vowels then the first consonant.
+  const IDS = ["a", "aa", "ka"];
+
+  const finishedVowels = {
+    ...defaultProgress(),
+    introViewed: true,
+    completed: ["a", "aa"],
+  };
+
+  it("keeps a consonant locked until the Body Letters intro is viewed", () => {
+    // Prerequisites met (all prior complete) but the body intro is unseen.
+    expect(isLessonUnlocked(finishedVowels, IDS, "ka")).toBe(false);
+    const seenBody = { ...finishedVowels, bodyIntroViewed: true };
+    expect(isLessonUnlocked(seenBody, IDS, "ka")).toBe(true);
+  });
+
+  it("does not gate vowels on the Body Letters intro", () => {
+    const fresh = { ...defaultProgress(), introViewed: true };
+    // Vowels ignore bodyIntroViewed entirely.
+    expect(isLessonUnlocked(fresh, IDS, "a")).toBe(true);
+    expect(fresh.bodyIntroViewed).toBe(false);
+  });
+
+  it("still requires the earlier lessons to be complete", () => {
+    const bodySeenButVowelsUnfinished = {
+      ...defaultProgress(),
+      introViewed: true,
+      bodyIntroViewed: true,
+      completed: ["a"], // aa not done
+    };
+    expect(isLessonUnlocked(bodySeenButVowelsUnfinished, IDS, "ka")).toBe(false);
   });
 });

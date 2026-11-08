@@ -1,17 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { LessonImage } from "@/components/ui";
 import type { SnakeLevel } from "@/lib/levels";
-import type { ChestClaimResult, ShieldType } from "@/lib/progress";
 import type { TaskXp } from "@/lib/xp";
 import type { Lesson } from "@/lib/types";
 
 /**
- * Full-screen celebration once the mastery queue is empty. Confetti,
- * a proud snake, the end-of-lesson XP summary, a first-completion treasure
- * chest, and a door to the next letter on the path.
+ * Full-screen celebration once the mastery queue is empty. Confetti, a proud
+ * snake, and the end-of-lesson XP summary. Its single primary button is
+ * "Continue"; the runner decides where it leads (the chest screen when one was
+ * earned, otherwise home). The treasure chest lives on its own screen now.
  */
 
 export interface LessonSummary {
@@ -32,16 +31,14 @@ export interface LessonSummary {
   dailyStreak: number;
   /** Final XP after both multipliers (what was actually banked). */
   finalTotal: number;
-  /** Whether to offer a first-completion treasure chest on this screen. */
-  offerChest: boolean;
 }
 
 export interface CelebrationProps {
   lesson: Lesson;
   nextLesson: { id: string; glyph: string; phonetic: string } | null;
   summary: LessonSummary;
-  /** Claim this lesson's chest, returning what the pick yielded. */
-  onClaimShield?: (choice: ShieldType) => ChestClaimResult;
+  /** Advance the completion flow (to the chest screen, or home). */
+  onContinue: () => void;
 }
 
 /** serpent / sage / wisdom / cream — the whole forest joins the party. */
@@ -80,7 +77,7 @@ const CONFETTI_PIECES: ConfettiPiece[] = Array.from(
 /** The burst is over by ~2.9s; despawn the whole layer at 3s. */
 const CONFETTI_LIFETIME_MS = 3000;
 
-const PRIMARY_LINK_CLASSES =
+const PRIMARY_BUTTON_CLASSES =
   "inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-blob bg-serpent px-6 py-3 font-ui text-lg font-bold text-forest-deep shadow-node transition-all duration-150 hover:bg-serpent-deep active:translate-y-1 active:shadow-none";
 
 function SummaryRow({ label, value }: { label: string; value: number }) {
@@ -110,148 +107,11 @@ function MultiplierRow({ label, multiplier }: { label: string; multiplier: numbe
   );
 }
 
-interface ShieldMeta {
-  type: ShieldType;
-  badge: string;
-  name: string;
-  blurb: string;
-}
-
-const SHIELD_META: Record<ShieldType, ShieldMeta> = {
-  flawless: {
-    type: "flawless",
-    badge: "🛡️⚡",
-    name: "Flawless Shield",
-    blurb: "Protects your flawless streak from one mistake.",
-  },
-  daily: {
-    type: "daily",
-    badge: "🛡️🔥",
-    name: "Daily Shield",
-    blurb: "Protects your daily streak if you miss a day.",
-  },
-};
-
-type ChestState = "closed" | "choose" | "claimed";
-
-/**
- * First-completion reward. A closed chest the learner taps to open, then a
- * deliberate choice between two shields. Opening/reveal animations are
- * skipped under prefers-reduced-motion.
- */
-function TreasureChest({
-  onClaimShield,
-}: {
-  onClaimShield: (choice: ShieldType) => ChestClaimResult;
-}) {
-  const [state, setState] = useState<ChestState>("closed");
-  const [claimed, setClaimed] = useState<{
-    meta: ShieldMeta;
-    result: ChestClaimResult;
-  } | null>(null);
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    setReduceMotion(
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    );
-  }, []);
-
-  const anim = (cls: string) => (reduceMotion ? "" : cls);
-
-  const pick = (choice: ShieldType): void => {
-    const result = onClaimShield(choice);
-    setClaimed({ meta: SHIELD_META[choice], result });
-    setState("claimed");
-  };
-
-  if (state === "closed") {
-    return (
-      <button
-        type="button"
-        onClick={() => setState("choose")}
-        aria-label="Open the treasure chest"
-        className="w-full rounded-blob border-2 border-wisdom bg-wisdom-soft p-5 text-center shadow-leaf transition-transform active:scale-95"
-      >
-        <span className={`block text-6xl ${anim("animate-wiggle")}`} aria-hidden="true">
-          🎁
-        </span>
-        <span className="mt-2 block font-ui text-lg font-extrabold text-wisdom-deep">
-          A treasure chest appeared!
-        </span>
-        <span className="mt-1 block font-ui text-sm font-semibold text-forest-soft">
-          Tap to open
-        </span>
-      </button>
-    );
-  }
-
-  if (state === "choose") {
-    return (
-      <div className="w-full rounded-blob border-2 border-wisdom bg-wisdom-soft p-5 text-center shadow-leaf">
-        <span className={`block text-5xl ${anim("animate-pop-in")}`} aria-hidden="true">
-          🎉
-        </span>
-        <h2 className="mt-2 font-ui text-lg font-extrabold text-wisdom-deep">
-          Choose your shield
-        </h2>
-        <p className="mt-1 font-ui text-sm font-semibold text-forest-soft">
-          Pick one to keep. Shields protect a streak from a single slip.
-        </p>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          {(["flawless", "daily"] as const).map((key) => {
-            const meta = SHIELD_META[key];
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => pick(key)}
-                aria-label={`${meta.name}. ${meta.blurb}`}
-                className="flex min-h-[132px] flex-col items-center justify-start gap-1.5 rounded-2xl border-2 border-sage-300 bg-cream-soft p-3 text-center transition-transform active:scale-95"
-              >
-                <span className="text-3xl" aria-hidden="true">
-                  {meta.badge}
-                </span>
-                <span className="font-ui text-sm font-extrabold text-forest">
-                  {meta.name}
-                </span>
-                <span className="font-ui text-xs font-semibold leading-snug text-forest-soft">
-                  {meta.blurb}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  // claimed
-  const meta = claimed?.meta ?? SHIELD_META.flawless;
-  const atMax = claimed?.result === "max";
-  return (
-    <div
-      className={`w-full rounded-blob border-2 border-wisdom bg-wisdom-soft p-5 text-center shadow-leaf ${anim("animate-pop-in")}`}
-      role="status"
-      aria-live="polite"
-    >
-      <span className="block text-5xl" aria-hidden="true">
-        {meta.badge}
-      </span>
-      <p className="mt-2 font-ui text-base font-extrabold text-wisdom-deep">
-        {atMax
-          ? `Already at max. Your ${meta.name} stash is full!`
-          : `${meta.name} added to your inventory!`}
-      </p>
-    </div>
-  );
-}
-
 export default function Celebration({
   lesson,
   nextLesson,
   summary,
-  onClaimShield,
+  onContinue,
 }: CelebrationProps) {
   // Confetti is a brief burst: skipped entirely under prefers-reduced-motion,
   // and the whole layer unmounts once every piece has faded out, so nothing
@@ -384,43 +244,27 @@ export default function Celebration({
           )}
         </div>
 
-        {/* First-completion treasure chest: choose one streak shield. */}
-        {summary.offerChest && onClaimShield && (
-          <TreasureChest onClaimShield={onClaimShield} />
-        )}
-
-        {nextLesson !== null ? (
-          <div className="flex w-full flex-col items-center gap-4">
-            <p className="font-ui text-lg font-bold text-forest">
+        <div className="flex w-full flex-col items-center gap-3">
+          {nextLesson !== null ? (
+            <p className="font-ui text-base font-bold text-forest">
               Next up:{" "}
-              <span className="font-tamil text-2xl">{nextLesson.glyph}</span>{" "}
-              ({nextLesson.phonetic})
+              <span className="font-tamil text-xl">{nextLesson.glyph}</span> (
+              {nextLesson.phonetic})
             </p>
-            <Link
-              href={`/lesson/${nextLesson.id}`}
-              className={PRIMARY_LINK_CLASSES}
-            >
-              Slither on to{" "}
-              <span className="font-tamil text-xl">{nextLesson.glyph}</span>
-            </Link>
-            <Link
-              href="/"
-              className="flex min-h-[48px] items-center justify-center px-4 font-ui text-base font-bold text-forest underline underline-offset-4"
-            >
-              Back to the path
-            </Link>
-          </div>
-        ) : (
-          <div className="flex w-full flex-col items-center gap-4">
-            <p className="text-balance font-ui text-lg font-bold text-forest">
+          ) : (
+            <p className="text-balance font-ui text-base font-bold text-forest">
               You&apos;ve traced every letter on the path so far. More coming
               soon!
             </p>
-            <Link href="/" className={PRIMARY_LINK_CLASSES}>
-              Back to the path
-            </Link>
-          </div>
-        )}
+          )}
+          <button
+            type="button"
+            onClick={onContinue}
+            className={PRIMARY_BUTTON_CLASSES}
+          >
+            Continue
+          </button>
+        </div>
       </main>
     </div>
   );

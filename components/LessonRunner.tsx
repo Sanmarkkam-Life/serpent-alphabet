@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Celebration, { type LessonSummary } from "@/components/Celebration";
+import ChestScreen from "@/components/ChestScreen";
 import LearnTask from "@/components/LearnTask";
 import PronounceTask from "@/components/PronounceTask";
 import RecognizeTask from "@/components/RecognizeTask";
@@ -24,7 +26,7 @@ import {
   bumpFlawlessStreak,
   claimChest,
   consumeFlawlessShield,
-  isChestClaimed,
+  grantChestOnCompletion,
   isLessonComplete,
   loadProgress,
   markLessonComplete,
@@ -71,7 +73,13 @@ export interface LessonRunnerProps {
   nextLesson: NextLessonSummary | null;
 }
 
-type View = "task" | "fail" | "testout" | "testout-miss" | "celebrate";
+type View =
+  | "task"
+  | "fail"
+  | "testout"
+  | "testout-miss"
+  | "celebrate"
+  | "chest";
 type Mode = "normal" | "review";
 type TestOutStep = "trace" | "recognize";
 
@@ -93,6 +101,7 @@ function testOutSessionKey(lessonId: string): string {
 }
 
 export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) {
+  const router = useRouter();
   const [queueState, setQueueState] = useState<MasteryQueueState>(() =>
     createInitialState(),
   );
@@ -112,6 +121,8 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
   const [lessonXp, setLessonXp] = useState<TaskXp>(ZERO_XP);
   const [xpAtStart, setXpAtStart] = useState(0);
   const [summary, setSummary] = useState<LessonSummary | null>(null);
+  /** Whether this completion earned a chest (a separate screen after summary). */
+  const [chestEarned, setChestEarned] = useState(false);
   const [muted, setMuted] = useState(false);
 
   // Global flawless streak (persistent across lessons/sessions).
@@ -216,9 +227,6 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
       flawlessStreak: streakForBonus,
       dailyStreak,
       finalTotal,
-      // A chest appears on first completion only, never in review, and never
-      // twice for the same lesson.
-      offerChest: flavor !== "review" && !isChestClaimed(before, lesson.id),
     };
   };
 
@@ -232,7 +240,12 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
     finalBestCombo: number,
     streakForBonus: number,
   ): void => {
-    if (mode === "normal") markLessonComplete(lesson.id);
+    // Only a genuine first completion marks the lesson and can earn a chest;
+    // review runs do neither.
+    if (mode === "normal") {
+      markLessonComplete(lesson.id);
+      setChestEarned(grantChestOnCompletion().chestEarned);
+    }
     feedbackFanfare();
     setSummary(
       summarize(
@@ -333,7 +346,9 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
     });
     addXp(earned.total);
     setLessonXp(earned);
+    // Test-out is a genuine first completion: mark it and roll for a chest.
     markLessonComplete(lesson.id);
+    setChestEarned(grantChestOnCompletion().chestEarned);
     feedbackFanfare();
     setSummary(summarize(earned, TEST_OUT_COMBO, streakNext, "testout"));
     setView("celebrate");
@@ -368,9 +383,17 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
         lesson={lesson}
         nextLesson={nextLesson}
         summary={summary}
-        onClaimShield={handleClaimShield}
+        onContinue={() => {
+          // A chest earned this run gets its own screen; otherwise go home.
+          if (chestEarned) setView("chest");
+          else router.push("/");
+        }}
       />
     );
+  }
+
+  if (view === "chest") {
+    return <ChestScreen onClaimShield={handleClaimShield} />;
   }
 
   const renderTask = (current: MasteryTask) => {

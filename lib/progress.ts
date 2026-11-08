@@ -1,6 +1,8 @@
 "use client";
 
 import { applyDailyRollover, recordActiveDay, localDateString } from "./streak";
+import { evaluateChest } from "./chest";
+import { isConsonantId } from "./sections";
 
 /**
  * Learner progress, persisted in localStorage under a versioned key.
@@ -55,6 +57,13 @@ export interface Progress {
    */
   tamilIntroViewed: boolean;
   /**
+   * True once "The Body Letters" intro has been viewed; the first consonant
+   * stays locked until then. Additive v6 field, defaults to false. Consonants
+   * are new content, so gating them behind this never re-locks existing users
+   * who already finished the vowels.
+   */
+  bodyIntroViewed: boolean;
+  /**
    * Global, persistent count of consecutive flawless task passes across the
    * whole app. Increments on every clean pass, resets to 0 on any mistake.
    * Distinct from the per-lesson combo. Additive field, defaults to 0.
@@ -70,6 +79,11 @@ export interface Progress {
    * grants a chest exactly once. Additive v5 field, defaults to [].
    */
   chestClaimedLessons: string[];
+  /**
+   * Completions since the last chest was granted, driving chest scarcity.
+   * Additive v6 field, defaults to 0. See lib/chest.ts.
+   */
+  lessonsSinceChest: number;
 }
 
 export function defaultProgress(): Progress {
@@ -81,9 +95,11 @@ export function defaultProgress(): Progress {
     mute: false,
     introViewed: false,
     tamilIntroViewed: false,
+    bodyIntroViewed: false,
     flawlessStreak: 0,
     shields: { flawless: 0, daily: 0 },
     chestClaimedLessons: [],
+    lessonsSinceChest: 0,
   };
 }
 
@@ -150,6 +166,11 @@ export function normalizeProgress(raw: unknown): Progress {
       (typeof obj.tamilIntroViewed === "boolean" && obj.tamilIntroViewed) ||
       (typeof obj.introViewed === "boolean" && obj.introViewed) ||
       completed.length > 0,
+    // No backfill: consonants are new v6 content, so an existing vowel-finisher
+    // simply views the new Body Letters intro to unlock them. Nothing they had
+    // is re-locked.
+    bodyIntroViewed:
+      typeof obj.bodyIntroViewed === "boolean" ? obj.bodyIntroViewed : false,
     flawlessStreak:
       typeof obj.flawlessStreak === "number" &&
       Number.isInteger(obj.flawlessStreak) &&
@@ -160,6 +181,12 @@ export function normalizeProgress(raw: unknown): Progress {
     chestClaimedLessons: isStringArray(obj.chestClaimedLessons)
       ? obj.chestClaimedLessons
       : base.chestClaimedLessons,
+    lessonsSinceChest:
+      typeof obj.lessonsSinceChest === "number" &&
+      Number.isInteger(obj.lessonsSinceChest) &&
+      obj.lessonsSinceChest >= 0
+        ? obj.lessonsSinceChest
+        : base.lessonsSinceChest,
   };
 }
 
@@ -336,6 +363,15 @@ export function markTamilIntroViewed(): Progress {
   return next;
 }
 
+/** Mark "The Body Letters" intro as viewed; unlocks the first consonant. */
+export function markBodyIntroViewed(): Progress {
+  const progress = loadProgress();
+  if (progress.bodyIntroViewed) return progress;
+  const next: Progress = { ...progress, bodyIntroViewed: true };
+  saveProgress(next);
+  return next;
+}
+
 /** Increment the global flawless streak after a clean task pass. */
 export function bumpFlawlessStreak(): Progress {
   const progress = loadProgress();
@@ -384,6 +420,26 @@ export function claimChest(
   const { progress: next, result } = applyChestClaim(progress, lessonId, choice);
   if (result !== "already") saveProgress(next);
   return { progress: next, result };
+}
+
+/**
+ * On a lesson's FIRST completion, advance the chest-scarcity counter and report
+ * whether a chest was earned. Call this AFTER markLessonComplete (so the total
+ * completion count is current) and ONLY for genuine first completions, never
+ * for review or repeat runs.
+ */
+export function grantChestOnCompletion(): {
+  progress: Progress;
+  chestEarned: boolean;
+} {
+  const progress = loadProgress();
+  const { grant, lessonsSinceChest } = evaluateChest(
+    progress.lessonsSinceChest,
+    progress.completed.length,
+  );
+  const next: Progress = { ...progress, lessonsSinceChest };
+  saveProgress(next);
+  return { progress: next, chestEarned: grant };
 }
 
 /**
@@ -446,6 +502,8 @@ export function isLessonUnlocked(
   if (!progress.introViewed) return false;
   const index = orderedIds.indexOf(lessonId);
   if (index === -1) return false;
+  // Consonants carry a second gate: the Body Letters intro must be viewed.
+  if (isConsonantId(lessonId) && !progress.bodyIntroViewed) return false;
   return orderedIds
     .slice(0, index)
     .every((id) => progress.completed.includes(id));
