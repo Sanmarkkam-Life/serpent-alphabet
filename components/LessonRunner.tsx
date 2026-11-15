@@ -90,6 +90,7 @@ const FAIL_MESSAGES: Record<TaskType, string> = {
   trace: "The snake slipped! Try again",
   recognize: "Not that one. Look again!",
   draw: "Almost! Look at the shape, then draw it again",
+  name: "Not that snake. Remember its name and look again!",
 };
 
 const GENERIC_FAIL_MESSAGE = "Oops! The snake lost its place. One more look!";
@@ -103,9 +104,11 @@ function testOutSessionKey(lessonId: string): string {
 }
 
 export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) {
+  // Named snakes get the extra snake-name recall round.
+  const queueOptions = { includeName: lesson.snake_name !== null };
   const router = useRouter();
   const [queueState, setQueueState] = useState<MasteryQueueState>(() =>
-    createInitialState(),
+    createInitialState(queueOptions),
   );
   const [view, setView] = useState<View>("task");
   const [mode, setMode] = useState<Mode>("normal");
@@ -113,7 +116,7 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
   const [attempt, setAttempt] = useState(0);
   /** Highest remaining-pass count ever seen; keeps the progress bar sane. */
   const [maxRemaining, setMaxRemaining] = useState<number>(() =>
-    remainingPasses(createInitialState()),
+    remainingPasses(createInitialState(queueOptions)),
   );
   const [failedType, setFailedType] = useState<TaskType | null>(null);
   /** Any mistake in this run; a clean review pushes the next one further out. */
@@ -370,12 +373,12 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
   };
 
   const resumeFullLesson = (): void => {
-    setQueueState(createInitialState());
+    setQueueState(createInitialState(queueOptions));
     setCombo(COMBO_START);
     setBestCombo(COMBO_START);
     setLessonXp(ZERO_XP);
     setAttempt((count) => count + 1);
-    setMaxRemaining(remainingPasses(createInitialState()));
+    setMaxRemaining(remainingPasses(createInitialState(queueOptions)));
     setView("task");
   };
 
@@ -422,6 +425,8 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
         return <RecognizeTask key={key} {...shared} />;
       case "draw":
         return <TraceTask key={key} {...shared} fromMemory />;
+      case "name":
+        return <RecognizeTask key={key} {...shared} cue="name" />;
     }
   };
 

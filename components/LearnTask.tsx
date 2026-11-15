@@ -59,6 +59,20 @@ export default function LearnTask({ lesson, onPass }: TaskComponentProps) {
         </>
       )}
 
+      {lesson.snake_name !== null && (
+        <p className="text-center font-ui text-lg font-bold text-forest">
+          Meet{" "}
+          <span className="text-serpent-deep">{lesson.snake_name}</span>
+          {lesson.snake_name_meaning && (
+            <span className="font-semibold text-wisdom-deep">
+              {" "}
+              ({lesson.snake_name_meaning})
+            </span>
+          )}
+          . Remember the name: it starts with this letter&apos;s sound.
+        </p>
+      )}
+
       <div className="flex flex-col gap-4">
         {paragraphs.map((paragraph, index) => (
           <p

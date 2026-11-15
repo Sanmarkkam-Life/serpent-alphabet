@@ -56,7 +56,7 @@ export function parTimeSeconds(
   if (type === "trace") return traceTimeLimit * TRACE_PAR_FRACTION;
   if (type === "draw")
     return traceTimeLimit * DRAW_TIME_FACTOR * TRACE_PAR_FRACTION;
-  if (type === "recognize") return RECOGNIZE_PAR_SECONDS;
+  if (type === "recognize" || type === "name") return RECOGNIZE_PAR_SECONDS;
   return null;
 }
 

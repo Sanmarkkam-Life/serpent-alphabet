@@ -18,6 +18,12 @@ export interface TaskComponentProps {
   onPass: (elapsedSeconds?: number) => void;
   onFail: () => void;
   isRedeeming: boolean;
+  /**
+   * What the question gives the learner: the letter's sound (default), or
+   * the snake's name ("Which snake is Karunai?"). The name round needs
+   * lesson.snake_name; without it the component falls back to the sound.
+   */
+  cue?: "sound" | "name";
 }
 
 /** How long the success flash shows before the parent is notified. */
@@ -45,7 +51,9 @@ export default function RecognizeTask({
   onPass,
   onFail,
   isRedeeming,
+  cue = "sound",
 }: TaskComponentProps) {
+  const byName = cue === "name" && lesson.snake_name !== null;
   // Shuffled exactly ONCE per mount (fresh key per presentation = fresh order).
   const [options] = useState<string[]>(() =>
     shuffle([lesson.glyph, ...lesson.distractors]),
@@ -167,11 +175,27 @@ export default function RecognizeTask({
   return (
     <div className="mx-auto w-full max-w-md">
       <h2 className="text-center font-ui text-2xl font-bold text-forest">
-        Which is the correct one?
+        {byName ? "Which snake is this?" : "Which is the correct one?"}
       </h2>
 
+      {/* Name round: the cue is only the snake's name, never sound or glyph. */}
+      {byName && (
+        <div className="mt-3 flex flex-col items-center gap-1">
+          <span className="inline-block -rotate-2 rounded-full bg-serpent px-6 py-2 font-ui text-2xl font-extrabold text-forest-deep shadow-node">
+            {lesson.snake_name}
+          </span>
+          {lesson.snake_name_meaning && (
+            <span className="font-ui text-sm font-semibold text-wisdom-deep">
+              “{lesson.snake_name_meaning}”
+            </span>
+          )}
+        </div>
+      )}
+
       {/* The cue is the sound, never the glyph. */}
-      <div className="mt-3 flex items-center justify-center gap-3">
+      <div
+        className={`mt-3 flex items-center justify-center gap-3${byName ? " hidden" : ""}`}
+      >
         {cueAudio === "available" && (
           <button
             type="button"

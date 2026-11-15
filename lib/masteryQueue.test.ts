@@ -35,6 +35,20 @@ describe("masteryQueue", () => {
     expect(isComplete(state)).toBe(false);
   });
 
+  it("adds the snake-name round last when the snake has a name", () => {
+    const state = createInitialState({ includeName: true });
+    expect(state.queue.map((t) => t.key)).toEqual([
+      "learn",
+      "pronounce",
+      "trace",
+      "recognize-1",
+      "recognize-2",
+      "draw",
+      "name",
+    ]);
+    expect(createInitialState({ includeName: false }).queue).toHaveLength(6);
+  });
+
   it("advances to the next task on a pass", () => {
     let state = createInitialState();
     state = passCurrent(state);

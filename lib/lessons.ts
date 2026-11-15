@@ -38,6 +38,17 @@ function parseLesson(raw: unknown, file: string): Lesson {
     return v;
   }
 
+  /** A string field that may be missing or null (older lesson files). */
+  function optionalStr(key: string): string | null {
+    const v = obj[key];
+    if (v === null || v === undefined || v === "") return null;
+    if (typeof v !== "string") {
+      problems.push(`"${key}" must be a string or null`);
+      return null;
+    }
+    return v;
+  }
+
   const lesson: Lesson = {
     id: str("id"),
     order: num("order"),
@@ -62,6 +73,8 @@ function parseLesson(raw: unknown, file: string): Lesson {
       obj.distractors.every((d): d is string => typeof d === "string")
         ? obj.distractors
         : (problems.push('"distractors" must be an array of strings'), []),
+    snake_name: optionalStr("snake_name"),
+    snake_name_meaning: optionalStr("snake_name_meaning"),
   };
 
   if (problems.length > 0) {

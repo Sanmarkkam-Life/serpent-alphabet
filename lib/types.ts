@@ -35,9 +35,23 @@ export interface Lesson {
   trace_tolerance: number;
   /** Exactly the wrong-answer glyphs for the Recognize task. */
   distractors: string[];
+  /**
+   * The snake's name, in Latin letters, e.g. "Karunai". It starts with this
+   * letter's sound so it works as a memory hook. Null when no Tamil word can
+   * start with the letter; the snake-name round is then skipped.
+   */
+  snake_name: string | null;
+  /** Short English meaning of the name, e.g. "compassion". Optional. */
+  snake_name_meaning: string | null;
 }
 
-export type TaskType = "learn" | "pronounce" | "trace" | "recognize" | "draw";
+export type TaskType =
+  | "learn"
+  | "pronounce"
+  | "trace"
+  | "recognize"
+  | "draw"
+  | "name";
 
 /** One entry in the mastery queue. Recognize appears three times. */
 export interface MasteryTask {

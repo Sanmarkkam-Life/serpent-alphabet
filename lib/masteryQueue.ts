@@ -36,9 +36,25 @@ export const INITIAL_TASK_PLAN: ReadonlyArray<{ key: string; type: TaskType }> =
     { key: "draw", type: "draw" },
   ];
 
-export function createInitialState(): MasteryQueueState {
+/** Fourth recall round: the snake's name is the cue. Only for named snakes. */
+export const NAME_TASK: { key: string; type: TaskType } = {
+  key: "name",
+  type: "name",
+};
+
+export interface InitialStateOptions {
+  /** Add the snake-name round (the lesson has a snake_name). */
+  includeName?: boolean;
+}
+
+export function createInitialState(
+  options: InitialStateOptions = {},
+): MasteryQueueState {
+  const plan = options.includeName
+    ? [...INITIAL_TASK_PLAN, NAME_TASK]
+    : INITIAL_TASK_PLAN;
   return {
-    queue: INITIAL_TASK_PLAN.map((task) => ({ ...task, passesNeeded: 1 })),
+    queue: plan.map((task) => ({ ...task, passesNeeded: 1 })),
   };
 }
 
