@@ -134,6 +134,34 @@ and draw it the way a learner should write it:
 Trace paths are stored in normalized 0–1 coordinates as an array of strokes
 (`[[[x,y],…],[[x,y],…]]`); the legacy flat single-stroke form still loads.
 
+### Snake names (the fourth recall round)
+
+`snake_name` (e.g. `"Karunai"`) and `snake_name_meaning` (`"compassion"`)
+are optional lesson fields. A named snake gets "Meet Karunai" on its learn
+card and a last recall round: the learner sees only the name and picks the
+letter. Names start with the letter's sound. Letters that cannot begin a
+Tamil word (ங ட ண ழ ள ற ன) stay `null` and skip the round.
+
+### Recording real voices (preferred over AI audio)
+
+AI text-to-speech is unreliable for lone Tamil syllables (silent, clipped or
+anglicised clips). A native speaker reads the letters in order on a phone,
+about one second apart, and one command splits and levels them:
+
+    .\scripts\split-recording.ps1 -File recording.m4a              # 18 consonants
+    .\scripts\split-recording.ps1 -File recording.m4a -Set vowels  # அ…ஔ, ஃ
+    .\scripts\split-recording.ps1 -File recording.m4a -DryRun      # check first
+
+It needs ffmpeg and writes `public/audio/<glyph>.mp3`; if it does not find
+exactly one sound per letter it stops and changes nothing.
+
+### Fixing a snake image whose letter shape is wrong
+
+Image models often bend complex letters into the wrong shape. Draw the exact
+glyph from a Tamil font into `public/letters/guides/<glyph>-shape.png`, push
+it, and give the model two references: an existing snake image (style) and
+the outline (shape). This fixed த, ஞ and ண on the first try.
+
 ### Content pipelines
 
 Two GitHub Actions bring assets in from Google Drive and ElevenLabs so the
