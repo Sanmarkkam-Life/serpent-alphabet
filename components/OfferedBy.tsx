@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import DonatePanel from "@/components/DonatePanel";
-import { ORG_NAME, ORG_URL, type Placement } from "@/lib/giving";
+import { FEEDBACK_URL, ORG_NAME, ORG_URL, type Placement } from "@/lib/giving";
 
 /**
  * Quiet footer line: who offers TamiLearn, a link to learn more, and Donate.
@@ -30,8 +30,16 @@ export default function OfferedBy({ placement }: { placement: Placement }) {
       </div>
       <div className="flex items-center gap-4 font-ui text-sm font-bold">
         <Link href="/about-app" className="text-forest-soft underline underline-offset-4">
-          About TamiLearn
+          About
         </Link>
+        <a
+          href={FEEDBACK_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-forest-soft underline underline-offset-4"
+        >
+          Share an idea
+        </a>
         <button
           type="button"
           onClick={() => setOpen(true)}

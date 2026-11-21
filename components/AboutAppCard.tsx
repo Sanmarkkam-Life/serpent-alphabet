@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import DonatePanel from "@/components/DonatePanel";
-import { ORG_NAME, ORG_URL } from "@/lib/giving";
+import { FEEDBACK_URL, ORG_NAME, ORG_URL } from "@/lib/giving";
 
 /**
  * About TamiLearn: who offers the app, why, and the permanent place to give.
@@ -64,6 +64,22 @@ export default function AboutAppCard() {
         <p className="mt-2 text-center font-ui text-xs text-forest-soft">
           100% of every gift serves the mission.
         </p>
+      </div>
+
+      <div className="rounded-blob bg-cream-soft p-6 shadow-leaf">
+        <h2 className="font-ui text-lg font-extrabold text-forest">Help us improve</h2>
+        <p className="mt-2 font-ui text-base leading-relaxed text-forest">
+          What confused you? What would you love to see next? Native Tamil
+          speakers and teachers: we would love your help with sounds and texts.
+        </p>
+        <a
+          href={FEEDBACK_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex min-h-[48px] w-full items-center justify-center rounded-blob border-2 border-forest px-6 py-2.5 font-ui text-base font-extrabold text-forest"
+        >
+          Share an idea ↗
+        </a>
       </div>
 
       <Link
