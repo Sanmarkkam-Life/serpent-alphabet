@@ -45,6 +45,10 @@ const FINGER_STEP_PX = 3;
  * coverage credit, as a fraction of the guide length. Small enough that the
  * learner cannot skip a chunk of the letter, large enough to absorb noise.
  */
+/** Coverage (orange) only lights guide points this close to the finger, as a
+ * fraction of the corridor tolerance, so nearby loops of the letter are not
+ * filled in before the finger reaches them. The corridor check stays wide. */
+export const COVER_RADIUS_FRACTION = 0.5;
 const AHEAD_WINDOW_FRACTION = 0.12;
 
 /** How far behind current progress still earns credit (backtracking). */
@@ -189,12 +193,14 @@ function creditSample(
 
   let inCorridor = false;
   let newProgress = progress;
-  // Credit every in-window guide point the finger is currently near — the
-  // corridor is wide, so one sample can legitimately cover several points.
+  const coverPx = tolerancePx * COVER_RADIUS_FRACTION;
+  // Credit in-window guide points close to the finger (tight radius), but
+  // judge "still on the path" against the full corridor.
   for (let i = windowStart; i <= windowEnd; i++) {
-    if (distance(guidePx[i], p) <= tolerancePx) {
+    const d = distance(guidePx[i], p);
+    if (d <= tolerancePx) inCorridor = true;
+    if (d <= coverPx) {
       covered[i] = true;
-      inCorridor = true;
       if (i > newProgress) newProgress = i;
     }
   }
