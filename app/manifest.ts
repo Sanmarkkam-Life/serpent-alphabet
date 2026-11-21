@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Serpent Alphabet",
-    short_name: "Serpent",
+    name: "TamiLearn",
+    short_name: "TamiLearn",
     description:
-      "Learn the Tamil alphabet letter by letter with a friendly snake guide. Trace, pronounce, and master each sound.",
+      "Learn the Tamil alphabet with the Serpent Alphabet: a friendly snake for every letter. Free, offered by Sanmarkkam Life.",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",

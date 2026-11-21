@@ -51,7 +51,7 @@ export default function AboutTamilCard() {
             today as the daily speech of over 80 million people.
           </p>
           <p>
-            Ramalinga Swamigal, the great sage whose light guides this path,
+            Vallalar (Ramalinga Adigal), the great sage whose light guides this path,
             honored Tamil as the language closest to the soul&apos;s own
             expression. He wrote all 5,818 verses of Thiru Arutpa in Tamil,
             choosing it as the vessel for the highest truths he knew.

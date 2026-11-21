@@ -1,5 +1,6 @@
 import { getAllLessons } from "@/lib/lessons";
 import HomePath from "@/components/HomePath";
+import OfferedBy from "@/components/OfferedBy";
 
 /**
  * Home screen (server component). Loads every lesson from /content/lessons
@@ -24,10 +25,10 @@ export default function HomePage() {
           🐍
         </div>
         <h1 className="mt-4 font-ui text-3xl font-extrabold tracking-tight text-forest">
-          Serpent Alphabet
+          TamiLearn
         </h1>
         <p className="mt-1 font-ui text-sm font-semibold text-forest-soft">
-          Learn the Tamil alphabet. One snake at a time.
+          The Serpent Alphabet: learn Tamil letters, one snake at a time.
         </p>
         {/* A quiet serpent squiggle to set the trail motif. */}
         <svg
@@ -49,6 +50,8 @@ export default function HomePage() {
       <section aria-label="Learning path" className="mt-8">
         <HomePath lessons={lessons} />
       </section>
+
+      <OfferedBy placement="home-footer" />
 
     </main>
   );

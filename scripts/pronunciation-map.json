@@ -4,7 +4,7 @@
     "voice_settings": {
       "stability": 0.9,
       "similarity_boost": 0.8,
-      "style": 0.0,
+      "style": 0,
       "use_speaker_boost": true
     }
   },
@@ -83,8 +83,8 @@
       "glyph": "ஓ",
       "id": "oo",
       "tamilText": "ஓ",
-      "phoneticHint": "oh (long)",
-      "notes": "Long o, as in 'go'"
+      "phoneticHint": "oh",
+      "notes": "long"
     },
     {
       "glyph": "ஔ",
@@ -99,6 +99,132 @@
       "tamilText": "ஃ",
       "phoneticHint": "akh",
       "notes": "Aytham, a soft aspiration"
+    },
+    {
+      "glyph": "க",
+      "id": "ka",
+      "tamilText": "க",
+      "phoneticHint": "ka",
+      "notes": "Consonant (uyirmei with inherent a)"
+    },
+    {
+      "glyph": "ங",
+      "id": "nga",
+      "tamilText": "ங",
+      "phoneticHint": "nga",
+      "notes": "Consonant (uyirmei with inherent a)"
+    },
+    {
+      "glyph": "ச",
+      "id": "cha",
+      "tamilText": "ச",
+      "phoneticHint": "cha",
+      "notes": "Consonant (uyirmei with inherent a)"
+    },
+    {
+      "glyph": "ஞ",
+      "id": "nya",
+      "tamilText": "ஞ",
+      "phoneticHint": "nya",
+      "notes": "Consonant (uyirmei with inherent a)"
+    },
+    {
+      "glyph": "ட",
+      "id": "tta",
+      "tamilText": "ட",
+      "phoneticHint": "ṭa",
+      "notes": "tongue curled back"
+    },
+    {
+      "glyph": "ண",
+      "id": "nna",
+      "tamilText": "ண",
+      "phoneticHint": "ṇa",
+      "notes": "tongue curled back"
+    },
+    {
+      "glyph": "த",
+      "id": "tha",
+      "tamilText": "த",
+      "phoneticHint": "tha",
+      "notes": "tongue at the teeth"
+    },
+    {
+      "glyph": "ந",
+      "id": "na",
+      "tamilText": "ந",
+      "phoneticHint": "na",
+      "notes": "tongue at the teeth"
+    },
+    {
+      "glyph": "ப",
+      "id": "pa",
+      "tamilText": "ப",
+      "phoneticHint": "pa",
+      "notes": "Consonant (uyirmei with inherent a)"
+    },
+    {
+      "glyph": "ம",
+      "id": "ma",
+      "tamilText": "ம",
+      "phoneticHint": "ma",
+      "notes": "Consonant (uyirmei with inherent a)"
+    },
+    {
+      "glyph": "ய",
+      "id": "ya",
+      "tamilText": "ய",
+      "phoneticHint": "ya",
+      "notes": "Consonant (uyirmei with inherent a)"
+    },
+    {
+      "glyph": "ர",
+      "id": "ra",
+      "tamilText": "ர",
+      "phoneticHint": "ra",
+      "notes": "soft"
+    },
+    {
+      "glyph": "ல",
+      "id": "la",
+      "tamilText": "ல",
+      "phoneticHint": "la",
+      "notes": "tongue at the teeth"
+    },
+    {
+      "glyph": "வ",
+      "id": "va",
+      "tamilText": "வ",
+      "phoneticHint": "va",
+      "notes": "Consonant (uyirmei with inherent a)"
+    },
+    {
+      "glyph": "ழ",
+      "id": "zha",
+      "tamilText": "ழ",
+      "phoneticHint": "zha",
+      "notes": "the tamil sound"
+    },
+    {
+      "glyph": "ள",
+      "id": "lla",
+      "tamilText": "ள",
+      "phoneticHint": "ḷa",
+      "notes": "tongue curled back"
+    },
+    {
+      "glyph": "ற",
+      "id": "rra",
+      "tamilText": "ற",
+      "phoneticHint": "ṟa",
+      "notes": "strong"
+    },
+    {
+      "glyph": "ன",
+      "id": "nna2",
+      "tamilText": "ன",
+      "phoneticHint": "na",
+      "notes": "tongue on the ridge"
     }
   ]
 }

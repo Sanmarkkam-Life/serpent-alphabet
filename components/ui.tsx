@@ -66,11 +66,14 @@ export function LessonImage({
   glyph,
   alt,
   className = "",
+  onError,
 }: {
   src: string;
   glyph: string;
   alt: string;
   className?: string;
+  /** Called once if the image fails to load (e.g. a 404). */
+  onError?: () => void;
 }) {
   const [failed, setFailed] = useState(false);
 
@@ -95,7 +98,10 @@ export function LessonImage({
           src={src}
           alt={alt}
           className="h-full w-full object-cover"
-          onError={() => setFailed(true)}
+          onError={() => {
+            setFailed(true);
+            onError?.();
+          }}
         />
       )}
     </div>

@@ -23,6 +23,7 @@ import {
   type TraceSession,
 } from "@/lib/trace";
 import { Button, Card } from "@/components/ui";
+import { DRAW_TIME_FACTOR, DRAW_TOLERANCE_FACTOR } from "@/lib/xp";
 
 /**
  * TraceTask — the learner traces the letter along the snake's path, inside a
@@ -53,6 +54,8 @@ interface CanvasSize {
 const SUCCESS_HOLD_MS = 600;
 /** How long the shake/dim plays before onFail fires. */
 const FAIL_HOLD_MS = 400;
+/** From memory, a miss reveals the letter long enough to study it. */
+const FAIL_REVEAL_HOLD_MS = 1600;
 
 /* Palette (canvas cannot read Tailwind tokens). */
 const CORRIDOR_COLOR = "rgba(168, 197, 160, 0.45)"; // sage-300, translucent
@@ -180,7 +183,17 @@ export default function TraceTask({
   onPass,
   onFail,
   isRedeeming,
-}: TaskComponentProps) {
+  fromMemory = false,
+}: TaskComponentProps & {
+  /** Draw-from-memory: hide the guide until the attempt ends. */
+  fromMemory?: boolean;
+}) {
+  const timeLimit = fromMemory
+    ? Math.round(lesson.trace_time_limit * DRAW_TIME_FACTOR)
+    : lesson.trace_time_limit;
+  const tolerance = fromMemory
+    ? Math.round(lesson.trace_tolerance * DRAW_TOLERANCE_FACTOR)
+    : lesson.trace_tolerance;
   const strokeCount = lesson.trace_path.length;
   const hasPath = strokeCount > 0;
   const multiStroke = strokeCount > 1;
@@ -252,11 +265,18 @@ export default function TraceTask({
     );
     if (strokesPx.length === 0) return;
 
-    const corridorWidth = 2 * scaleTolerance(lesson.trace_tolerance, w);
-    // 1. Faint corridor for every stroke.
-    for (const gp of strokesPx) strokePolyline(ctx, gp, CORRIDOR_COLOR, corridorWidth);
-    // 2. Thinner center line so the shape is readable.
-    for (const gp of strokesPx) strokePolyline(ctx, gp, CENTER_LINE_COLOR, 6);
+    const corridorWidth = 2 * scaleTolerance(tolerance, w);
+    // From memory the guide stays hidden until the attempt ends (pass or miss).
+    const showGuide =
+      !fromMemory ||
+      phaseRef.current === "success" ||
+      phaseRef.current === "fail";
+    if (showGuide) {
+      // 1. Faint corridor for every stroke.
+      for (const gp of strokesPx) strokePolyline(ctx, gp, CORRIDOR_COLOR, corridorWidth);
+      // 2. Thinner center line so the shape is readable.
+      for (const gp of strokesPx) strokePolyline(ctx, gp, CENTER_LINE_COLOR, 6);
+    }
 
     // 3. Progress: covered points in snake orange (whole letter on success).
     if (phaseRef.current === "success") {
@@ -280,7 +300,7 @@ export default function TraceTask({
       const guide = strokesPx[idx] ?? strokesPx[0];
       drawStartMarker(ctx, guide, w, h);
     }
-  }, [lesson.trace_path, lesson.trace_tolerance]);
+  }, [lesson.trace_path, tolerance, fromMemory]);
 
   const stopTimer = useCallback(() => {
     if (rafRef.current !== null) {
@@ -315,16 +335,20 @@ export default function TraceTask({
           if (outcome === "pass") onPassRef.current(elapsedSeconds);
           else onFailRef.current();
         },
-        outcome === "pass" ? SUCCESS_HOLD_MS : FAIL_HOLD_MS,
+        outcome === "pass"
+          ? SUCCESS_HOLD_MS
+          : fromMemory
+            ? FAIL_REVEAL_HOLD_MS
+            : FAIL_HOLD_MS,
       );
     },
-    [draw, releaseActivePointer, stopTimer],
+    [draw, fromMemory, releaseActivePointer, stopTimer],
   );
 
   /** Countdown starts on the FIRST touch only; drains the slim bar. */
   const startTimer = useCallback(() => {
     if (deadlineRef.current !== null) return;
-    const totalMs = Math.max(1, lesson.trace_time_limit) * 1000;
+    const totalMs = Math.max(1, timeLimit) * 1000;
     startTimeRef.current = performance.now();
     deadlineRef.current = startTimeRef.current + totalMs;
     const tick = () => {
@@ -342,7 +366,7 @@ export default function TraceTask({
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [finish, lesson.trace_time_limit]);
+  }, [finish, timeLimit]);
 
   /** Store the updated multi-stroke session, then act on what it decided. */
   const applyMulti = useCallback(
@@ -397,7 +421,7 @@ export default function TraceTask({
         lesson.trace_path,
         cssSize.w,
         cssSize.h,
-        lesson.trace_tolerance,
+        tolerance,
       );
       startedRef.current = true;
       coveragePctRef.current = 0;
@@ -557,14 +581,34 @@ export default function TraceTask({
             Redemption round: steady does it
           </p>
         )}
-        <h2 className="font-ui text-2xl font-bold text-forest">
-          Trace <span className="font-tamil">{lesson.glyph}</span>
-        </h2>
-        <p className="mt-1 font-ui text-sm text-forest-soft">
-          {multiStroke
-            ? "Start at the dot and follow each stroke. Lift your finger between strokes."
-            : "Start at the dot and follow the snake's path in one stroke."}
-        </p>
+        {fromMemory ? (
+          <>
+            <h2 className="font-ui text-2xl font-bold text-forest">
+              Draw it from memory
+            </h2>
+            <p className="mx-auto mt-2 inline-block rounded-full bg-serpent px-4 py-1 font-ui text-lg font-bold text-forest-deep">
+              {lesson.phonetic}
+            </p>
+            <p className="mt-2 font-ui text-sm text-forest-soft">
+              {phase === "fail"
+                ? "Here is the letter. Study its shape, then try again."
+                : multiStroke
+                  ? "No guide this time. Start at the dot and draw each stroke, lifting between strokes."
+                  : "No guide this time. Start at the dot and draw the letter in one stroke."}
+            </p>
+          </>
+        ) : (
+          <>
+            <h2 className="font-ui text-2xl font-bold text-forest">
+              Trace <span className="font-tamil">{lesson.glyph}</span>
+            </h2>
+            <p className="mt-1 font-ui text-sm text-forest-soft">
+              {multiStroke
+                ? "Start at the dot and follow each stroke. Lift your finger between strokes."
+                : "Start at the dot and follow the snake's path in one stroke."}
+            </p>
+          </>
+        )}
         {multiStroke && (
           <p className="mt-1 font-ui text-sm font-bold text-forest">
             Stroke {Math.min(strokeIndex + 1, strokeCount)} of {strokeCount}
@@ -585,7 +629,11 @@ export default function TraceTask({
           <canvas
             ref={canvasRef}
             className="touch-none-strict absolute inset-0 h-full w-full"
-            aria-label={`Tracing canvas for ${lesson.glyph}`}
+            aria-label={
+              fromMemory
+                ? `Drawing canvas: draw the letter for ${lesson.phonetic}`
+                : `Tracing canvas for ${lesson.glyph}`
+            }
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerEnd}

@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Celebration, { type LessonSummary } from "@/components/Celebration";
+import ChestScreen from "@/components/ChestScreen";
 import LearnTask from "@/components/LearnTask";
 import PronounceTask from "@/components/PronounceTask";
 import RecognizeTask from "@/components/RecognizeTask";
@@ -24,10 +26,11 @@ import {
   bumpFlawlessStreak,
   claimChest,
   consumeFlawlessShield,
-  isChestClaimed,
+  grantChestOnCompletion,
   isLessonComplete,
   loadProgress,
   markLessonComplete,
+  recordReview,
   recordTaskActivity,
   resetFlawlessStreak,
   setMute,
@@ -71,7 +74,13 @@ export interface LessonRunnerProps {
   nextLesson: NextLessonSummary | null;
 }
 
-type View = "task" | "fail" | "testout" | "testout-miss" | "celebrate";
+type View =
+  | "task"
+  | "fail"
+  | "testout"
+  | "testout-miss"
+  | "celebrate"
+  | "chest";
 type Mode = "normal" | "review";
 type TestOutStep = "trace" | "recognize";
 
@@ -80,6 +89,8 @@ const FAIL_MESSAGES: Record<TaskType, string> = {
   pronounce: "Almost! Your snake wants one more try",
   trace: "The snake slipped! Try again",
   recognize: "Not that one. Look again!",
+  draw: "Almost! Look at the shape, then draw it again",
+  name: "Not that snake. Remember its name and look again!",
 };
 
 const GENERIC_FAIL_MESSAGE = "Oops! The snake lost its place. One more look!";
@@ -93,8 +104,11 @@ function testOutSessionKey(lessonId: string): string {
 }
 
 export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) {
+  // Named snakes get the extra snake-name recall round.
+  const queueOptions = { includeName: lesson.snake_name !== null };
+  const router = useRouter();
   const [queueState, setQueueState] = useState<MasteryQueueState>(() =>
-    createInitialState(),
+    createInitialState(queueOptions),
   );
   const [view, setView] = useState<View>("task");
   const [mode, setMode] = useState<Mode>("normal");
@@ -102,9 +116,11 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
   const [attempt, setAttempt] = useState(0);
   /** Highest remaining-pass count ever seen; keeps the progress bar sane. */
   const [maxRemaining, setMaxRemaining] = useState<number>(() =>
-    remainingPasses(createInitialState()),
+    remainingPasses(createInitialState(queueOptions)),
   );
   const [failedType, setFailedType] = useState<TaskType | null>(null);
+  /** Any mistake in this run; a clean review pushes the next one further out. */
+  const hadMistakeRef = useRef(false);
 
   // Gamification state
   const [combo, setCombo] = useState(COMBO_START);
@@ -112,6 +128,8 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
   const [lessonXp, setLessonXp] = useState<TaskXp>(ZERO_XP);
   const [xpAtStart, setXpAtStart] = useState(0);
   const [summary, setSummary] = useState<LessonSummary | null>(null);
+  /** Whether this completion earned a chest (a separate screen after summary). */
+  const [chestEarned, setChestEarned] = useState(false);
   const [muted, setMuted] = useState(false);
 
   // Global flawless streak (persistent across lessons/sessions).
@@ -216,9 +234,6 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
       flawlessStreak: streakForBonus,
       dailyStreak,
       finalTotal,
-      // A chest appears on first completion only, never in review, and never
-      // twice for the same lesson.
-      offerChest: flavor !== "review" && !isChestClaimed(before, lesson.id),
     };
   };
 
@@ -232,7 +247,14 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
     finalBestCombo: number,
     streakForBonus: number,
   ): void => {
-    if (mode === "normal") markLessonComplete(lesson.id);
+    // Only a genuine first completion marks the lesson and can earn a chest;
+    // review runs do neither.
+    if (mode === "normal") {
+      markLessonComplete(lesson.id);
+      setChestEarned(grantChestOnCompletion().chestEarned);
+    } else {
+      recordReview(lesson.id, !hadMistakeRef.current);
+    }
     feedbackFanfare();
     setSummary(
       summarize(
@@ -285,6 +307,7 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
   const handleFail = (): void => {
     if (view !== "task" || isComplete(queueState)) return;
     setFailedType(currentTask(queueState)?.type ?? null);
+    hadMistakeRef.current = true;
     setCombo(comboAfterFail());
     breakStreak();
     feedbackFail();
@@ -333,7 +356,9 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
     });
     addXp(earned.total);
     setLessonXp(earned);
+    // Test-out is a genuine first completion: mark it and roll for a chest.
     markLessonComplete(lesson.id);
+    setChestEarned(grantChestOnCompletion().chestEarned);
     feedbackFanfare();
     setSummary(summarize(earned, TEST_OUT_COMBO, streakNext, "testout"));
     setView("celebrate");
@@ -348,12 +373,12 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
   };
 
   const resumeFullLesson = (): void => {
-    setQueueState(createInitialState());
+    setQueueState(createInitialState(queueOptions));
     setCombo(COMBO_START);
     setBestCombo(COMBO_START);
     setLessonXp(ZERO_XP);
     setAttempt((count) => count + 1);
-    setMaxRemaining(remainingPasses(createInitialState()));
+    setMaxRemaining(remainingPasses(createInitialState(queueOptions)));
     setView("task");
   };
 
@@ -368,9 +393,17 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
         lesson={lesson}
         nextLesson={nextLesson}
         summary={summary}
-        onClaimShield={handleClaimShield}
+        onContinue={() => {
+          // A chest earned this run gets its own screen; otherwise go home.
+          if (chestEarned) setView("chest");
+          else router.push("/");
+        }}
       />
     );
+  }
+
+  if (view === "chest") {
+    return <ChestScreen onClaimShield={handleClaimShield} />;
   }
 
   const renderTask = (current: MasteryTask) => {
@@ -390,6 +423,10 @@ export default function LessonRunner({ lesson, nextLesson }: LessonRunnerProps) 
         return <TraceTask key={key} {...shared} />;
       case "recognize":
         return <RecognizeTask key={key} {...shared} />;
+      case "draw":
+        return <TraceTask key={key} {...shared} fromMemory />;
+      case "name":
+        return <RecognizeTask key={key} {...shared} cue="name" />;
     }
   };
 

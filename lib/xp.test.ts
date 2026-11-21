@@ -56,6 +56,7 @@ describe("combo", () => {
 describe("time bonus", () => {
   it("applies to trace and recognize only", () => {
     expect(parTimeSeconds("trace", 12)).toBeCloseTo(7.2);
+    expect(parTimeSeconds("draw", 12)).toBeCloseTo(10.8); // 1.5x time, same 60% par
     expect(parTimeSeconds("recognize", 12)).toBe(5);
     expect(parTimeSeconds("learn", 12)).toBeNull();
     expect(parTimeSeconds("pronounce", 12)).toBeNull();

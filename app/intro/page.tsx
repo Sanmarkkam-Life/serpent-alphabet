@@ -8,7 +8,7 @@ import { getAllLessons } from "@/lib/lessons";
  */
 
 export const metadata: Metadata = {
-  title: "The Soul Letters · Serpent Alphabet",
+  title: "The Soul Letters · TamiLearn",
 };
 
 export default function IntroPage() {
