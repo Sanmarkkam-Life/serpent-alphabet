@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getFile, GithubError, putFile } from "@/lib/github";
 import { sanitizeLessonId, validateTracePath } from "@/lib/traceValidation";
+import { safeEqual } from "../_auth";
 import { resolveGithubConfig } from "../_github-config";
 
 /**
@@ -13,16 +14,6 @@ import { resolveGithubConfig } from "../_github-config";
 export const dynamic = "force-dynamic";
 
 const LESSONS_DIR = "content/lessons";
-
-/** Length-guarded constant-time-ish string compare. */
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
-}
 
 function json(body: unknown, status: number) {
   return NextResponse.json(body, {

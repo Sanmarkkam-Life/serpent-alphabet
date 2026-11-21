@@ -79,6 +79,10 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [recording, setRecording] = useState<RecordedAudio | null>(null);
   const [audioError, setAudioError] = useState<string | null>(null);
+  const [audioSaveState, setAudioSaveState] = useState<SaveState>("idle");
+  const [audioSaveMessage, setAudioSaveMessage] = useState<string | null>(null);
+  /** Audio URLs saved this session (lessons prop only refreshes on redeploy). */
+  const [savedAudio, setSavedAudio] = useState<Record<string, string>>({});
 
   // Auto-sync state (status board + one-tap save to GitHub)
   const [traceStatus, setTraceStatus] = useState<LessonStatus[] | null>(null);
@@ -366,6 +370,12 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
     isDrawingRef.current = false;
     setSelectedId(id);
     setStrokes([]);
+    // A take belongs to one letter: never let it be saved onto another.
+    // (Not revoked: savedAudio may still preview it.)
+    recordingRef.current = null;
+    setRecording(null);
+    setAudioSaveState("idle");
+    setAudioSaveMessage(null);
     setTestOutcome(null);
     setMode("record");
   };
@@ -490,6 +500,48 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
       );
     }
   }, [strokes, hasRecording, recordedPointCount, selectedLesson, authorPassword]);
+
+  const handleSaveAudio = async () => {
+    const recorded = recordingRef.current;
+    if (!recorded || !selectedLesson) return;
+    if (!authorPassword) {
+      setAudioSaveState("error");
+      setAudioSaveMessage("Enter the author password first.");
+      return;
+    }
+    setAudioSaveState("saving");
+    setAudioSaveMessage(null);
+    try {
+      const buf = new Uint8Array(await recorded.blob.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < buf.length; i += 0x8000) {
+        bin += String.fromCharCode.apply(
+          null,
+          Array.from(buf.subarray(i, i + 0x8000)),
+        );
+      }
+      const res = await fetch("/api/save-audio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedLesson.id,
+          password: authorPassword,
+          mimeType: recorded.mimeType,
+          data: btoa(bin),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? `Save failed (${res.status})`);
+      setSavedAudio((prev) => ({ ...prev, [selectedLesson.id]: recorded.url }));
+      setAudioSaveState("saved");
+      setAudioSaveMessage("Saved ✓ Your voice is live in ~1 min.");
+    } catch (err) {
+      setAudioSaveState("error");
+      setAudioSaveMessage(
+        `${err instanceof Error ? err.message : "Save failed."} You can still use Download recording.`,
+      );
+    }
+  };
 
   const handleStartAudio = async () => {
     setAudioError(null);
@@ -898,6 +950,28 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
           </Card>
         ) : (
           <div className="space-y-3">
+            <Card>
+              <p className="font-ui text-sm text-forest-soft">Say clearly, once:</p>
+              <p className="mt-1 font-ui text-2xl font-bold text-forest">
+                <span className="font-tamil">{selectedLesson.glyph}</span>{" "}
+                <span className="text-serpent-deep">
+                  “{selectedLesson.phonetic.replace(/!+$/, "")}”
+                </span>
+              </p>
+              <p className="mt-1 font-ui text-xs text-forest-soft">
+                Start recording, wait a moment, say it, wait a moment, stop.
+              </p>
+              <p className="mt-3 font-ui text-sm text-forest-soft">
+                Sound learners hear now:
+              </p>
+              <audio
+                key={savedAudio[selectedLesson.id] ?? selectedLesson.audio ?? ""}
+                controls
+                preload="none"
+                src={savedAudio[selectedLesson.id] ?? selectedLesson.audio ?? undefined}
+                className="mt-1 w-full"
+              />
+            </Card>
             {isRecordingAudio ? (
               <Button fullWidth onClick={() => void handleStopAudio()}>
                 <span className="inline-block h-3 w-3 animate-shimmer rounded-full bg-forest-deep" />
@@ -934,12 +1008,20 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
                     Download recording
                   </a>
                 </div>
-                <p className="font-ui text-xs text-forest-soft">
-                  Drop the file into /public/audio/ and set the lesson JSON
-                  &quot;audio&quot; field to match (e.g.
-                  &quot;/audio/a.m4a&quot;). Browsers record m4a/webm; either
-                  plays fine. Convert to mp3 only if you prefer.
-                </p>
+                <Button
+                  fullWidth
+                  onClick={() => void handleSaveAudio()}
+                  disabled={audioSaveState === "saving"}
+                >
+                  {audioSaveState === "saving" ? "Saving…" : "Save audio"}
+                </Button>
+                {audioSaveMessage && (
+                  <p
+                    className={`font-ui text-sm ${audioSaveState === "error" ? "text-serpent-deep" : "text-forest"}`}
+                  >
+                    {audioSaveMessage}
+                  </p>
+                )}
               </div>
             )}
           </div>
