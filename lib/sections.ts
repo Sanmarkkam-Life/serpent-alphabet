@@ -18,6 +18,8 @@ export const VOWEL_IDS = [
   "o",
   "oo",
   "au",
+  // ஃ (aaytham) stands between the families; it closes the soul-letter section.
+  "aytham",
 ] as const;
 
 /** The 18 consonants (mei), in path order. */
