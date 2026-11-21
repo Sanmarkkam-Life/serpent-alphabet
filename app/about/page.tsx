@@ -7,7 +7,7 @@ import AboutTamilCard from "@/components/AboutTamilCard";
  */
 
 export const metadata: Metadata = {
-  title: "About Tamil · Serpent Alphabet",
+  title: "About Tamil · TamiLearn",
 };
 
 export default function AboutPage() {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { LessonImage } from "@/components/ui";
+import GivingCard from "@/components/GivingCard";
 import type { SnakeLevel } from "@/lib/levels";
 import type { TaskXp } from "@/lib/xp";
 import type { Lesson } from "@/lib/types";
@@ -243,6 +244,10 @@ export default function Celebration({
             </div>
           )}
         </div>
+
+        {/* Once-only note from Sanmarkkam Life: a welcome, or after a whole
+            group of letters, a gentle donation ask. Never blocks Continue. */}
+        <GivingCard lessonId={lesson.id} flavor={summary.flavor} />
 
         <div className="flex w-full flex-col items-center gap-3">
           {nextLesson !== null ? (

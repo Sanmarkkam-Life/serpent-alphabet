@@ -10,7 +10,7 @@ import { CONSONANT_IDS } from "@/lib/sections";
  */
 
 export const metadata: Metadata = {
-  title: "The Body Letters · Serpent Alphabet",
+  title: "The Body Letters · TamiLearn",
 };
 
 export default function BodyPage() {
