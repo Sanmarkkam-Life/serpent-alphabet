@@ -113,6 +113,26 @@ export async function putFile(
   sha: string,
   message: string,
 ): Promise<{ commitSha: string | null }> {
+  return putBase64File(
+    config,
+    filePath,
+    Buffer.from(text, "utf-8").toString("base64"),
+    sha,
+    message,
+  );
+}
+
+/**
+ * Create (sha null) or replace (sha given) a file from base64 content, e.g.
+ * a recorded audio clip. Returns the new commit sha.
+ */
+export async function putBase64File(
+  config: GithubConfig,
+  filePath: string,
+  base64: string,
+  sha: string | null,
+  message: string,
+): Promise<{ commitSha: string | null }> {
   const res = await ghFetch(
     config,
     `/repos/${config.owner}/${config.repo}/contents/${encodeURIComponent(filePath).replace(/%2F/g, "/")}`,
@@ -120,8 +140,8 @@ export async function putFile(
       method: "PUT",
       body: JSON.stringify({
         message,
-        content: Buffer.from(text, "utf-8").toString("base64"),
-        sha,
+        content: base64,
+        ...(sha ? { sha } : {}),
         branch: config.branch,
       }),
     },

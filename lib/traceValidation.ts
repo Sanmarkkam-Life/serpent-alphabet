@@ -7,7 +7,7 @@ import type { NormalizedPoint } from "./types";
  */
 
 /** Lesson ids are lowercase-letters only; this also blocks path traversal. */
-const LESSON_ID_RE = /^[a-z]+$/;
+const LESSON_ID_RE = /^[a-z][a-z0-9]*$/;
 
 /** Sane bounds on a trace path length (author strokes are simplified). */
 export const MIN_TRACE_POINTS = 2;

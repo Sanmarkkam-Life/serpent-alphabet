@@ -11,16 +11,17 @@ describe("sanitizeLessonId", () => {
     expect(sanitizeLessonId("a")).toBe("a");
     expect(sanitizeLessonId("aa")).toBe("aa");
     expect(sanitizeLessonId("aytham")).toBe("aytham");
+    expect(sanitizeLessonId("nna2")).toBe("nna2");
   });
 
-  it("rejects path traversal and anything non [a-z]", () => {
+  it("rejects path traversal and anything non [a-z0-9]", () => {
     for (const bad of [
       "",
       "../a",
       "a/b",
       "a.json",
       "A",
-      "a1",
+      "1a",
       "a ",
       " a",
       "a-b",
