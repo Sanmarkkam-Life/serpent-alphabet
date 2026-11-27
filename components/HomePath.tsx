@@ -36,6 +36,14 @@ export interface HomePathLesson {
 export interface HomePathProps {
   /** All lessons, already sorted by `order`. */
   lessons: HomePathLesson[];
+  /** Vowel-sign lessons (uyirmei), in order. */
+  signs?: HomePathSign[];
+}
+
+export interface HomePathSign {
+  id: string;
+  sign: string;
+  name: string;
 }
 
 type Slot = "left" | "center" | "right";
@@ -323,6 +331,39 @@ function BodyLettersNode({
   );
 }
 
+/** A vowel-sign lesson node (uyirmei): opens /sign/<id>. */
+function SignNode({
+  sign,
+  unlocked,
+  done,
+}: {
+  sign: HomePathSign;
+  unlocked: boolean;
+  done: boolean;
+}) {
+  if (!unlocked) {
+    return (
+      <div className="flex w-32 flex-col items-center" aria-disabled="true">
+        <IntroBadge icon={sign.sign} viewed={false} wiggle={false} locked />
+        <IntroNodeLabel text={sign.name} />
+        <span className="sr-only">
+          {sign.name}. Locked: open The Body Letters first.
+        </span>
+      </div>
+    );
+  }
+  return (
+    <Link
+      href={`/sign/${sign.id}`}
+      className="flex w-32 flex-col items-center"
+      aria-label={`${sign.name}, the sign ${sign.sign}.${done ? " Practise again." : ""}`}
+    >
+      <IntroBadge icon={sign.sign} viewed={done} wiggle={!done} />
+      <IntroNodeLabel text={sign.name} />
+    </Link>
+  );
+}
+
 /** A labelled divider that opens a section of the trail. */
 function SectionLabel({ text, tamil }: { text: string; tamil?: string }) {
   return (
@@ -352,7 +393,7 @@ interface TrailSection {
   nodes: TrailNode[];
 }
 
-export default function HomePath({ lessons }: HomePathProps) {
+export default function HomePath({ lessons, signs = [] }: HomePathProps) {
   // Default (server-matching) state: no progress yet.
   const [progress, setProgress] = useState<Progress>(defaultProgress());
   const [dailyShieldSaved, setDailyShieldSaved] = useState(false);
@@ -463,6 +504,24 @@ export default function HomePath({ lessons }: HomePathProps) {
         })),
       ],
     },
+    ...(signs.length > 0
+      ? [
+          {
+            label: "Compound letters",
+            tamil: "உயிர்மெய்",
+            nodes: signs.map((sign) => ({
+              key: `sign-${sign.id}`,
+              el: (
+                <SignNode
+                  sign={sign}
+                  unlocked={progress.bodyIntroViewed}
+                  done={progress.completed.includes(`sign-${sign.id}`)}
+                />
+              ),
+            })),
+          },
+        ]
+      : []),
   ];
 
   return (

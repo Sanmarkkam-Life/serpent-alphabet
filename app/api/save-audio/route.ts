@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getFile, GithubError, putBase64File, putFile } from "@/lib/github";
 import { sanitizeLessonId } from "@/lib/traceValidation";
+import { COMPOUND_ID_RE } from "@/lib/signs";
 import { safeEqual } from "../_auth";
 import { resolveGithubConfig } from "../_github-config";
 
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 
 const LESSONS_DIR = "content/lessons";
 const AUDIO_DIR = "public/audio";
+const SIGNS_DIR = "content/signs";
 /** A letter is a second or two; 2 MB leaves lots of room. */
 const MAX_BYTES = 2 * 1024 * 1024;
 
@@ -59,7 +61,10 @@ export async function POST(request: Request) {
   if (typeof password !== "string" || !safeEqual(password, authorPassword)) {
     return json({ error: "Wrong author password." }, 401);
   }
-  const safeId = sanitizeLessonId(id);
+  // A compound letter ("ka_aa") is stored in its sign file, not a lesson.
+  const compound =
+    typeof id === "string" && id.length <= 40 ? COMPOUND_ID_RE.exec(id) : null;
+  const safeId = compound ? compound[0] : sanitizeLessonId(id);
   if (!safeId) return json({ error: "Invalid lesson id." }, 400);
 
   const baseMime =
@@ -73,8 +78,12 @@ export async function POST(request: Request) {
   if (bytes < 1000) return json({ error: "Recording is too short." }, 400);
   if (bytes > MAX_BYTES) return json({ error: "Recording is too long." }, 400);
 
-  const lessonPath = `${LESSONS_DIR}/${safeId}.json`;
-  const audioPath = `${AUDIO_DIR}/${safeId}.${ext}`;
+  const lessonPath = compound
+    ? `${SIGNS_DIR}/${compound[2]}.json`
+    : `${LESSONS_DIR}/${safeId}.json`;
+  const audioPath = compound
+    ? `${AUDIO_DIR}/signs/${safeId}.${ext}`
+    : `${AUDIO_DIR}/${safeId}.${ext}`;
 
   try {
     // 1. The lesson must exist.
@@ -88,7 +97,11 @@ export async function POST(request: Request) {
       throw err;
     }
     const lesson = JSON.parse(lessonFile.text) as Record<string, unknown>;
-    const glyph = typeof lesson.glyph === "string" ? lesson.glyph : safeId;
+    const glyph = compound
+      ? safeId
+      : typeof lesson.glyph === "string"
+        ? lesson.glyph
+        : safeId;
 
     // 2. Write the clip (replace if an earlier take exists).
     let audioSha: string | null = null;
@@ -108,8 +121,19 @@ export async function POST(request: Request) {
     // 3. Point the lesson at it. Re-read in case the sha moved.
     const fresh = await getFile(config, lessonPath);
     const freshLesson = JSON.parse(fresh.text) as Record<string, unknown>;
-    const url = `/audio/${safeId}.${ext}?v=${Date.now().toString(36)}`;
-    freshLesson.audio = url;
+    const stamp = Date.now().toString(36);
+    const url = compound
+      ? `/audio/signs/${safeId}.${ext}?v=${stamp}`
+      : `/audio/${safeId}.${ext}?v=${stamp}`;
+    if (compound) {
+      const map =
+        typeof freshLesson.audio === "object" && freshLesson.audio !== null
+          ? (freshLesson.audio as Record<string, string>)
+          : {};
+      freshLesson.audio = { ...map, [safeId]: url };
+    } else {
+      freshLesson.audio = url;
+    }
     const { commitSha } = await putFile(
       config,
       lessonPath,

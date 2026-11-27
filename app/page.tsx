@@ -1,4 +1,5 @@
 import { getAllLessons } from "@/lib/lessons";
+import { getAllSigns } from "@/lib/signs";
 import HomePath from "@/components/HomePath";
 import OfferedBy from "@/components/OfferedBy";
 
@@ -48,7 +49,10 @@ export default function HomePage() {
       </header>
 
       <section aria-label="Learning path" className="mt-8">
-        <HomePath lessons={lessons} />
+        <HomePath
+          lessons={lessons}
+          signs={getAllSigns().map((s) => ({ id: s.id, sign: s.sign, name: s.name }))}
+        />
       </section>
 
       <OfferedBy placement="home-footer" />

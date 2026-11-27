@@ -24,7 +24,7 @@ export interface StudioLetter {
   glyph: string;
   phonetic: string;
   audio: string;
-  section: "vowel" | "consonant" | "other";
+  section: "vowel" | "consonant" | "sign" | "other";
 }
 
 /** Same key as Author mode, so the password is entered once per session. */
@@ -229,6 +229,7 @@ export default function RecordStudio({ letters }: { letters: StudioLetter[] }) {
   const groups: { title: string; key: StudioLetter["section"] }[] = [
     { title: "Vowels · உயிர்", key: "vowel" },
     { title: "Consonants · மெய்", key: "consonant" },
+    { title: "Compound letters · ா (aa)", key: "sign" },
     { title: "Other", key: "other" },
   ];
   const savedCount = Object.values(rows).filter((r) => r.kind === "saved").length;

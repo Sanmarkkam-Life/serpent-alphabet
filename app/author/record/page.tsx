@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getAllLessons } from "@/lib/lessons";
+import { getAllSigns } from "@/lib/signs";
 import { isConsonantId, isVowelId } from "@/lib/sections";
 import RecordStudio, { type StudioLetter } from "@/components/RecordStudio";
 
@@ -21,6 +22,18 @@ export default function RecordPage() {
     audio: l.audio,
     section: isVowelId(l.id) ? "vowel" : isConsonantId(l.id) ? "consonant" : "other",
   }));
+  // Compound letters, sign by sign (one sitting of 18 per sign).
+  for (const sign of getAllSigns()) {
+    for (const c of sign.compounds) {
+      letters.push({
+        id: c.id,
+        glyph: c.glyph,
+        phonetic: c.translit,
+        audio: c.audio ?? "",
+        section: "sign",
+      });
+    }
+  }
 
   return (
     <main className="mx-auto w-full max-w-md px-4 py-6">
