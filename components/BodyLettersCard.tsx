@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { markBodyIntroViewed } from "@/lib/progress";
+import VallalarQuote from "@/components/VallalarQuote";
 
 /**
  * "The Body Letters" intro card, shown after the twelve vowels and before the
@@ -71,6 +72,14 @@ export default function BodyLettersCard({
             You learned the soul. Now you learn the body.
           </p>
         </div>
+
+        <VallalarQuote
+          lines={[
+            "In the word Tamil, Vallalar says the consonants த், ம் and ழ் are “like the body to the life (uyir)”.",
+            "And a reminder: of repeating the sacred letters of a mantra, Vallalar says this is only “the first doorway”. In the end “one leaves off dwelling on the letters … and stands so that compassion and Sivam alone are the reality.”",
+          ]}
+          source="Vyakhyanangal 3.4.1 · Notes of Teaching 1.52.1"
+        />
 
         {firstConsonant !== null && (
           <Link

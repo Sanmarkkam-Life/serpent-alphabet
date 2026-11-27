@@ -62,6 +62,7 @@ function parseLesson(raw: unknown, file: string): Lesson {
         : typeof obj.vallalar_note === "string"
           ? obj.vallalar_note
           : (problems.push('"vallalar_note" must be a string or null'), null),
+    vallalar_source: optionalStr("vallalar_source"),
     audio: str("audio"),
     // Accepts the legacy flat form and the new multi-stroke form; both are
     // normalized to NormalizedPoint[][]. A missing/garbage path yields [].

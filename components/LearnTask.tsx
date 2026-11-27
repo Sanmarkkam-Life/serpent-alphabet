@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button, LessonImage } from "@/components/ui";
 import type { Lesson } from "@/lib/types";
+import { KARUNAI_URL } from "@/lib/giving";
 
 /**
  * Learn task — the gentle introduction to a letter. Always passes: the
@@ -20,6 +21,38 @@ export interface TaskComponentProps {
   onPass: () => void;
   onFail: () => void;
   isRedeeming: boolean;
+}
+
+/**
+ * Opens KarunAI on the website. The suggested question is copied first, so
+ * the learner only has to paste it (the page cannot be pre-filled).
+ */
+function AskKarunAI({ glyph }: { glyph: string }) {
+  const [copied, setCopied] = useState(false);
+  const question = `What does Vallalar teach about the Tamil letter ${glyph}?`;
+  return (
+    <div className="mt-3 border-t border-wisdom/30 pt-3">
+      <a
+        href={KARUNAI_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => {
+          navigator.clipboard?.writeText(question).then(
+            () => setCopied(true),
+            () => undefined,
+          );
+        }}
+        className="font-ui text-sm font-bold text-forest underline underline-offset-4"
+      >
+        Ask KarunAI about <span className="font-tamil">{glyph}</span> →
+      </a>
+      <p className="mt-1 font-ui text-xs text-forest-soft">
+        {copied
+          ? "Question copied: paste it into KarunAI."
+          : `Ask: “${question}”`}
+      </p>
+    </div>
+  );
 }
 
 export default function LearnTask({ lesson, onPass }: TaskComponentProps) {
@@ -93,6 +126,12 @@ export default function LearnTask({ lesson, onPass }: TaskComponentProps) {
           <p className="font-ui text-base font-medium italic leading-relaxed text-forest">
             {lesson.vallalar_note}
           </p>
+          {lesson.vallalar_source && (
+            <p className="mt-2 font-ui text-xs font-semibold text-wisdom-deep">
+              Source: {lesson.vallalar_source}
+            </p>
+          )}
+          <AskKarunAI glyph={lesson.glyph} />
         </div>
       )}
 

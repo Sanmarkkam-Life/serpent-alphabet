@@ -21,6 +21,8 @@ export interface Lesson {
   peculiarities: string;
   /** Optional wisdom-card text; render only when present. */
   vallalar_note: string | null;
+  /** Where the note comes from in our published books, e.g. "Notes of Teaching 1.49.1". */
+  vallalar_source: string | null;
   /** Path to reference pronunciation audio; the file may be missing. */
   audio: string;
   /**

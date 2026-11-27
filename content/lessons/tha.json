@@ -5,7 +5,7 @@
   "phonetic": "Tha! (tongue at the teeth)",
   "image": "/letters/த.png",
   "peculiarities": "த is a soft 't' made with the tongue touching the back of the upper teeth, gentler than the English 't'. It is the second of Tamil's two 't' sounds.\n\nBetween vowels it softens toward 'd'. Compare it with ட: one touches the teeth, the other curls back.",
-  "vallalar_note": null,
+  "vallalar_note": "த is the first sound of the word Tamil. Vallalar calls த் “the form of Siva”: in the small inner space of the heart, Arut Perum Jothi abides.",
   "audio": "/audio/tha.wav?v=mwzf3c4f",
   "trace_path": [
     [
@@ -1263,5 +1263,6 @@
     "க"
   ],
   "snake_name": "Thayai",
-  "snake_name_meaning": "mercy"
+  "snake_name_meaning": "mercy",
+  "vallalar_source": "Vyakhyanangal 3.2.1, 3.6.1"
 }

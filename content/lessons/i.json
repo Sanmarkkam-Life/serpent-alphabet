@@ -6,7 +6,7 @@
   "image": "/letters/இ.png",
   "audio": "/audio/i.wav?v=mwzf477c",
   "peculiarities": "இ is the short 'i', as in 'it' or 'in'. It is quick and bright, and one of the most common sounds in Tamil.\n\nThe shape is one flowing curl that turns back on itself. Our snake makes this letter by curling into a neat little spiral and peeking out at the end.",
-  "vallalar_note": null,
+  "vallalar_note": "“I is the letter of the conscious power of the individual soul: it makes manifest the consciousness that never leaves Pati”, the Lord. Vallalar also calls இ “the Pranava of grace”.",
   "trace_path": [
     [
       0.5067,
@@ -1797,5 +1797,6 @@
     "ஒ"
   ],
   "snake_name": "Inbam",
-  "snake_name_meaning": "joy"
+  "snake_name_meaning": "joy",
+  "vallalar_source": "Vyakhyanangal 3.3.1 · Notes of Teaching 1.49.4"
 }

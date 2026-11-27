@@ -14,6 +14,8 @@ import { CONSONANT_IDS, VOWEL_IDS } from "./sections";
 export const ORG_NAME = "Sanmarkkam Life";
 export const ORG_URL = "https://sanmarkkamlife.org/";
 export const DONATE_PAGE_URL = "https://sanmarkkamlife.org/donate/";
+/** KarunAI, the Vallalar guide on the website. */
+export const KARUNAI_URL = "https://sanmarkkamlife.org/karunai/";
 /** Public Google Form where learners share ideas and offer help. */
 export const FEEDBACK_URL =
   "https://docs.google.com/forms/d/1bUu1Z4Do8jY6qQ_W6i6eckS2zkYdYssPZnxfrUsSk6U/viewform";

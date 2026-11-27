@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { markIntroViewed } from "@/lib/progress";
+import VallalarQuote from "@/components/VallalarQuote";
 
 /**
  * The Soul Letters intro card. Opening it counts as viewing it (the first
@@ -79,6 +80,14 @@ export default function IntroCard({ firstLesson }: IntroCardProps) {
             a time.
           </p>
         </div>
+
+        <VallalarQuote
+          lines={[
+            "In the word Tamil (த்-அ-ம்-இ-ழ்), Vallalar calls the vowels அ and இ “powers of consciousness”.",
+            "“The Tamil language itself gives the experience of pure Sivam most easily.”",
+          ]}
+          source="Vyakhyanangal 3.2.1, 3.10.1"
+        />
 
         {firstLesson !== null && (
           <Link

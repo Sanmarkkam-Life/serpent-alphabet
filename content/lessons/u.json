@@ -6,7 +6,7 @@
   "image": "/letters/உ.png",
   "audio": "/audio/u.wav?v=mwzf1t15",
   "peculiarities": "உ is the short 'u', as in 'put' or 'push'. Round your lips gently and let the sound out; it is soft, never forced.\n\nThe shape is a single open curve that swings down and around. Our snake makes it in one easy glide, like slipping around a stone.",
-  "vallalar_note": null,
+  "vallalar_note": "In Tamil numerals உ is 2 and அ is 8. Vallalar says God “taught me the eight and the two”, and calls “the letters A and U” a name of the soul’s natural quality, compassion. With அ and ம், உ is part of the Pranava, Om.",
   "trace_path": [
     [
       0.3471,
@@ -897,5 +897,6 @@
     "இ"
   ],
   "snake_name": "Uyir",
-  "snake_name_meaning": "life, the soul"
+  "snake_name_meaning": "life, the soul",
+  "vallalar_source": "Agaval, line 566 · Notes of Teaching 1.104.1, 1.53.2"
 }

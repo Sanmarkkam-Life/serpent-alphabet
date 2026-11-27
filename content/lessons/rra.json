@@ -5,7 +5,7 @@
   "phonetic": "Ṟa! (strong)",
   "image": "/letters/ற.png",
   "peculiarities": "ற is the strong 'r', with the tongue trilling or pressing harder than ர. Doubled, ற்ற sounds like 'tr', as in வெற்றி (vetri, victory).\n\nTwo 'r' letters: ர soft, ற strong.",
-  "vallalar_note": null,
+  "vallalar_note": "Vallalar names ழ, ற and ன as the letters that belong to Tamil alone: its crown, middle and foot. ற is the middle.",
   "audio": "/audio/rra.wav?v=mwzf3l67",
   "trace_path": [
     [
@@ -1047,5 +1047,6 @@
     "ங"
   ],
   "snake_name": null,
-  "snake_name_meaning": null
+  "snake_name_meaning": null,
+  "vallalar_source": "Vyakhyanangal 3.8.1"
 }

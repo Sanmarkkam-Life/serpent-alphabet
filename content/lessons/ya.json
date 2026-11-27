@@ -5,7 +5,7 @@
   "phonetic": "Ya!",
   "image": "/letters/ய.png",
   "peculiarities": "ய is 'ya', as in 'yard'. A soft, gliding sound.\n\nIts shape is a cousin of ம and ப; keep an eye on the middle stroke.",
-  "vallalar_note": null,
+  "vallalar_note": "In the five-letter mantra, Vallalar reads ய as “the soul, the Hall of Consciousness”.",
   "audio": "/audio/ya.wav?v=mwzf23nh",
   "trace_path": [
     [
@@ -843,5 +843,6 @@
     "வ"
   ],
   "snake_name": "Yaazh",
-  "snake_name_meaning": "the ancient harp"
+  "snake_name_meaning": "the ancient harp",
+  "vallalar_source": "Notes of Teaching 1.52.1"
 }
