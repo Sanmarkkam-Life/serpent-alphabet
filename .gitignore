@@ -31,3 +31,6 @@ next-env.d.ts
 
 # ElevenLabs generate-audio.mjs --local-only preview output
 /temp-audio
+
+# Research with unpublished (Book VI draft) material: Drive only, never in the public repo
+content/vallalar-letters-research.md
