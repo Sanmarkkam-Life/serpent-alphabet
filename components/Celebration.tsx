@@ -137,7 +137,7 @@ export default function Celebration({
       ? "Tested out. Respect."
       : summary.flavor === "review"
         ? "Review complete. Still sharp!"
-        : "You mastered";
+        : "You mastered it!";
 
   return (
     <div className="relative flex min-h-dvh flex-col overflow-hidden bg-cream">
@@ -178,9 +178,8 @@ export default function Celebration({
           <h1 className="font-ui text-2xl font-extrabold text-forest">
             {heading}
           </h1>
-          <span className="font-tamil text-8xl font-bold leading-none text-forest">
-            {lesson.glyph}
-          </span>
+          {/* The snake image above already shows the letter, so no big glyph
+              here: it keeps Continue on screen without scrolling. */}
           <p className="text-balance font-ui text-base leading-relaxed text-forest-soft">
             Your snake is coiled up with pride. The sound{" "}
             <span className="font-extrabold text-serpent-deep">
