@@ -7,7 +7,7 @@
   "sound": "aa",
   "name": "The long tail",
   "costume": "A long tail stands beside the letter and stretches its sound: க (ka) becomes கா (kaa).",
-  "image": null,
+  "image": "/signs/aa.png",
   "audio": {},
   "words": [
     { "word": "வா", "translit": "vaa", "meaning": "come" },
