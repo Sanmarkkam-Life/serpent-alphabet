@@ -514,7 +514,8 @@ export default function HomePath({ lessons, signs = [] }: HomePathProps) {
               el: (
                 <SignNode
                   sign={sign}
-                  unlocked={progress.bodyIntroViewed}
+                  // Pilot: open to everyone for now (was progress.bodyIntroViewed).
+                  unlocked
                   done={progress.completed.includes(`sign-${sign.id}`)}
                 />
               ),
