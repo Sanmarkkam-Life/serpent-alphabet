@@ -24,6 +24,8 @@ const EXT_FOR_MIME: Record<string, string> = {
   "audio/webm": "webm",
   "audio/ogg": "ogg",
   "audio/mpeg": "mp3",
+  // The recording studio sends trimmed, levelled WAV (plays everywhere).
+  "audio/wav": "wav",
 };
 
 function json(body: unknown, status: number) {

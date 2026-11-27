@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getAllLessons } from "@/lib/lessons";
 import AuthorStudio from "@/components/AuthorStudio";
 
@@ -23,6 +24,12 @@ export default function AuthorPage() {
         <p className="mt-1 font-ui text-sm text-forest-soft">
           Record trace paths and reference audio for lessons.
         </p>
+        <Link
+          href="/author/record"
+          className="mt-3 inline-flex items-center gap-2 rounded-full bg-serpent px-4 py-2 font-ui text-sm font-extrabold text-forest-deep shadow-node"
+        >
+          🎙️ Recording studio: all letters on one page →
+        </Link>
       </header>
       <AuthorStudio lessons={lessons} />
     </main>
