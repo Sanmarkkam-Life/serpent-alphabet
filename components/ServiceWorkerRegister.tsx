@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
+import { captureInstallPrompt } from "@/lib/install";
 
 /**
  * Registers the service worker in production builds only — a SW caching
  * `next dev` assets makes local development maddening.
  */
 export default function ServiceWorkerRegister() {
+  // Keep the phone's one-time install prompt for the Install button.
+  useEffect(() => captureInstallPrompt(), []);
+
   useEffect(() => {
     if (
       process.env.NODE_ENV !== "production" ||

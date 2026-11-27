@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import DonatePanel from "@/components/DonatePanel";
+import InstallButton from "@/components/InstallButton";
 import { FEEDBACK_URL, ORG_NAME, ORG_URL, type Placement } from "@/lib/giving";
 
 /**
@@ -28,7 +29,7 @@ export default function OfferedBy({ placement }: { placement: Placement }) {
           </a>
         </span>
       </div>
-      <div className="flex items-center gap-4 font-ui text-sm font-bold">
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 font-ui text-sm font-bold">
         <Link href="/about-app" className="text-forest-soft underline underline-offset-4">
           About
         </Link>
@@ -40,6 +41,7 @@ export default function OfferedBy({ placement }: { placement: Placement }) {
         >
           Share an idea
         </a>
+        <InstallButton />
         <button
           type="button"
           onClick={() => setOpen(true)}
