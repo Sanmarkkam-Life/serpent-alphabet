@@ -143,7 +143,7 @@ export default function RecordStudio({ letters }: { letters: StudioLetter[] }) {
         setRow(id, { kind: "error", message: result });
         return;
       }
-      const url = URL.createObjectURL(new Blob([result.wav], { type: "audio/wav" }));
+      const url = URL.createObjectURL(new Blob([result.wav.buffer as ArrayBuffer], { type: "audio/wav" }));
       setRow(id, { kind: "ready", url, wav: result.wav, seconds: result.seconds });
       play(url);
     } catch {
