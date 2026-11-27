@@ -25,6 +25,9 @@ import {
 import { Button, Card } from "@/components/ui";
 import { DRAW_TIME_FACTOR, DRAW_TOLERANCE_FACTOR } from "@/lib/xp";
 
+/** Draw-from-memory: how long the one-time peek shows the guide. */
+const PEEK_SECONDS = 3;
+
 /**
  * TraceTask — the learner traces the letter along the snake's path, inside a
  * forgiving corridor, before a gentle timer runs out. Letters may have
@@ -217,11 +220,17 @@ export default function TraceTask({
   const rafRef = useRef<number | null>(null);
   const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const coveragePctRef = useRef(0);
+  /** Draw-from-memory peek: the guide is showing right now. */
+  const peekingRef = useRef(false);
+  const peekTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [size, setSize] = useState<CanvasSize | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [coveragePct, setCoveragePct] = useState(0);
   const [strokeIndex, setStrokeIndex] = useState(0);
+  /** One peek per attempt; seconds left while the guide is showing. */
+  const [peekUsed, setPeekUsed] = useState(false);
+  const [peekSecondsLeft, setPeekSecondsLeft] = useState(0);
 
   const onPassRef = useRef(onPass);
   const onFailRef = useRef(onFail);
@@ -269,6 +278,7 @@ export default function TraceTask({
     // From memory the guide stays hidden until the attempt ends (pass or miss).
     const showGuide =
       !fromMemory ||
+      peekingRef.current ||
       phaseRef.current === "success" ||
       phaseRef.current === "fail";
     if (showGuide) {
@@ -399,8 +409,39 @@ export default function TraceTask({
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
+  /**
+   * Draw-from-memory help: show the guide once, for a few seconds, before the
+   * learner starts. Drawing is paused while it shows, so it can't be traced.
+   */
+  const startPeek = () => {
+    if (!fromMemory || peekUsed || phaseRef.current !== "idle") return;
+    setPeekUsed(true);
+    peekingRef.current = true;
+    setPeekSecondsLeft(PEEK_SECONDS);
+    draw();
+    let left = PEEK_SECONDS;
+    peekTimerRef.current = setInterval(() => {
+      left -= 1;
+      setPeekSecondsLeft(left);
+      if (left <= 0) {
+        if (peekTimerRef.current) clearInterval(peekTimerRef.current);
+        peekTimerRef.current = null;
+        peekingRef.current = false;
+        draw();
+      }
+    }, 1000);
+  };
+
+  useEffect(
+    () => () => {
+      if (peekTimerRef.current) clearInterval(peekTimerRef.current);
+    },
+    [],
+  );
+
   const handlePointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     if (finishedRef.current) return;
+    if (peekingRef.current) return; // no tracing over the peeked guide
     if (!e.isPrimary) return; // multi-touch: ignore non-primary entirely
     if (activePointerRef.current !== null) return;
     const canvas = canvasRef.current;
@@ -649,6 +690,29 @@ export default function TraceTask({
           )}
         </div>
       </div>
+
+      {/* Draw-from-memory help: one short look at the guide per attempt. */}
+      {fromMemory && hasPath && (phase === "idle" || peekSecondsLeft > 0) && (
+        <div className="mt-3 flex justify-center">
+          {peekSecondsLeft > 0 ? (
+            <p className="rounded-full bg-wisdom-soft px-4 py-2 font-ui text-sm font-bold text-wisdom-deep">
+              Look closely… hiding in {peekSecondsLeft}
+            </p>
+          ) : !peekUsed ? (
+            <button
+              type="button"
+              onClick={startPeek}
+              className="rounded-full border-2 border-wisdom px-4 py-2 font-ui text-sm font-bold text-wisdom-deep"
+            >
+              👁 Peek once ({PEEK_SECONDS} s)
+            </button>
+          ) : (
+            <p className="font-ui text-xs font-semibold text-forest-soft">
+              Peek used. Now draw it from memory.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Slim countdown: sage track, serpent fill, snake riding the end. */}
       <div className="mt-4 px-2" aria-hidden="true">
