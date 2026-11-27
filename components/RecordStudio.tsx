@@ -34,10 +34,21 @@ type RowState =
   | { kind: "idle" }
   | { kind: "recording" }
   | { kind: "processing" }
-  | { kind: "ready"; url: string; wav: Uint8Array; seconds: number }
-  | { kind: "saving"; url: string; wav: Uint8Array; seconds: number }
+  | { kind: "ready"; url: string; wav: Uint8Array; mime: string; seconds: number; raw: boolean }
+  | { kind: "saving"; url: string; wav: Uint8Array; mime: string; seconds: number; raw: boolean }
   | { kind: "saved"; url: string }
-  | { kind: "error"; message: string; url?: string; wav?: Uint8Array; seconds?: number };
+  | { kind: "error"; message: string; url?: string; wav?: Uint8Array; mime?: string; seconds?: number; raw?: boolean };
+
+interface Take {
+  wav: Uint8Array;
+  mime: string;
+  seconds: number;
+  /** True when the browser blanked the sound data, so the take is unprocessed. */
+  raw: boolean;
+}
+
+/** A recording of a few KB has real sound in it even if the page cannot read it. */
+const MIN_RAW_BYTES = 6000;
 
 /** A lesson audio path set by a saved recording carries a ?v= stamp. */
 function isOwnVoice(audio: string): boolean {
@@ -52,7 +63,22 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-async function processTake(blob: Blob): Promise<{ wav: Uint8Array; seconds: number } | string> {
+/**
+ * Some privacy browsers (Brave Shields) blank or alter the sound data a page
+ * reads back, so a real recording can look silent. Then keep the original
+ * recording untouched rather than refusing it.
+ */
+async function rawTake(blob: Blob): Promise<Take | string> {
+  if (blob.size < MIN_RAW_BYTES) return "No voice heard. Check the microphone and try again.";
+  return {
+    wav: new Uint8Array(await blob.arrayBuffer()),
+    mime: blob.type || "audio/webm",
+    seconds: 0,
+    raw: true,
+  };
+}
+
+async function processTake(blob: Blob): Promise<Take | string> {
   const ctx = new (window.AudioContext ||
     (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
   try {
@@ -62,13 +88,18 @@ async function processTake(blob: Blob): Promise<{ wav: Uint8Array; seconds: numb
     );
     const mono = resample(toMono(channels), decoded.sampleRate, CLIP_SAMPLE_RATE);
     const clip = cleanClip(mono, CLIP_SAMPLE_RATE);
-    if (clip.silent) return "No voice heard. Check the microphone and try again.";
+    if (clip.silent) return rawTake(blob);
     if (clip.durationS > MAX_CLIP_SECONDS) {
       return "That take is long. Say only the one sound, then stop.";
     }
-    return { wav: encodeWav(clip.samples, clip.sampleRate), seconds: clip.durationS };
+    return {
+      wav: encodeWav(clip.samples, clip.sampleRate),
+      mime: "audio/wav",
+      seconds: clip.durationS,
+      raw: false,
+    };
   } catch {
-    return "Could not read the recording. Try again.";
+    return rawTake(blob);
   } finally {
     void ctx.close();
   }
@@ -143,8 +174,8 @@ export default function RecordStudio({ letters }: { letters: StudioLetter[] }) {
         setRow(id, { kind: "error", message: result });
         return;
       }
-      const url = URL.createObjectURL(new Blob([result.wav.buffer as ArrayBuffer], { type: "audio/wav" }));
-      setRow(id, { kind: "ready", url, wav: result.wav, seconds: result.seconds });
+      const url = URL.createObjectURL(new Blob([result.wav.buffer as ArrayBuffer], { type: result.mime }));
+      setRow(id, { kind: "ready", url, ...result });
       play(url);
     } catch {
       setRow(id, { kind: "error", message: "Nothing was recorded. Try again." });
@@ -158,8 +189,8 @@ export default function RecordStudio({ letters }: { letters: StudioLetter[] }) {
       setRow(letter.id, { ...row, kind: "error", message: "Enter the author password at the top first." } as RowState);
       return;
     }
-    const { url, wav, seconds } = row as { url: string; wav: Uint8Array; seconds: number };
-    setRow(letter.id, { kind: "saving", url, wav, seconds });
+    const { url, wav, mime, seconds, raw } = row as { url: string } & Take;
+    setRow(letter.id, { kind: "saving", url, wav, mime, seconds, raw });
     try {
       const res = await fetch("/api/save-audio", {
         method: "POST",
@@ -167,7 +198,7 @@ export default function RecordStudio({ letters }: { letters: StudioLetter[] }) {
         body: JSON.stringify({
           id: letter.id,
           password,
-          mimeType: "audio/wav",
+          mimeType: mime,
           data: toBase64(wav),
         }),
       });
@@ -188,7 +219,9 @@ export default function RecordStudio({ letters }: { letters: StudioLetter[] }) {
         message: err instanceof Error ? err.message : "Save failed. Try again.",
         url,
         wav,
+        mime,
         seconds,
+        raw,
       });
     }
   };
@@ -331,8 +364,13 @@ export default function RecordStudio({ letters }: { letters: StudioLetter[] }) {
                   <p className="mt-2 min-h-[1.25rem] font-ui text-xs font-semibold">
                     {recording && <span className="text-serpent-deep">Recording… say {letter.glyph} once, then Stop.</span>}
                     {row.kind === "processing" && <span className="text-forest-soft">Trimming and levelling…</span>}
-                    {row.kind === "ready" && (
+                    {row.kind === "ready" && !row.raw && (
                       <span className="text-forest-soft">{row.seconds.toFixed(1)} s, trimmed and levelled. Listen, then Save.</span>
+                    )}
+                    {row.kind === "ready" && row.raw && (
+                      <span className="text-wisdom-deep">
+                        Recorded. This browser hides the sound from the page, so it was not trimmed. Listen, then Save. (Chrome gives cleaner clips.)
+                      </span>
                     )}
                     {row.kind === "saved" && <span className="text-forest">Saved ✓ Live in the app in about a minute.</span>}
                     {row.kind === "error" && <span className="text-serpent-deep">{row.message}</span>}
