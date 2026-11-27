@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import DonatePanel from "@/components/DonatePanel";
+import VallalarQuote from "@/components/VallalarQuote";
 import { FEEDBACK_URL, ORG_NAME, ORG_URL } from "@/lib/giving";
 
 /**
@@ -37,6 +38,12 @@ export default function AboutAppCard() {
           </p>
           <p className="font-semibold">TamiLearn is free for everyone, and it always will be.</p>
         </div>
+        <VallalarQuote
+          lines={[
+            "Vallalar’s test of a true explanation, and the spirit of TamiLearn: “Said the way I have said it, even small children will understand.”",
+          ]}
+          source="The Great Teaching (Perupadesam) 1.4.12"
+        />
         <a
           href={ORG_URL}
           target="_blank"
