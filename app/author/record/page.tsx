@@ -23,9 +23,18 @@ export default function RecordPage() {
     section: isVowelId(l.id) ? "vowel" : isConsonantId(l.id) ? "consonant" : "other",
   }));
   // Compound letters, sign by sign (one sitting of 18 per sign).
+  const lessonById = new Map(getAllLessons().map((l) => [l.id, l]));
   for (const sign of getAllSigns()) {
+    const vowel = lessonById.get(sign.vowelId);
     for (const c of sign.compounds) {
+      const cons = lessonById.get(c.consonantId);
+      // Guide: your க then your ஆ, said one after the other (signs only).
+      const hint =
+        sign.kind === "sign" && vowel && cons
+          ? { label: `${cons.glyph} + ${vowel.glyph}`, audios: [cons.audio, vowel.audio] }
+          : undefined;
       letters.push({
+        hint,
         id: c.id,
         glyph: c.glyph,
         phonetic: c.translit,

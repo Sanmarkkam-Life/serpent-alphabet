@@ -60,6 +60,12 @@ const GLYPH_COLOR = "rgba(46, 91, 62, 0.12)"; // faint forest
 const CANVAS_BG = "#FAF6EC"; // cream-soft
 const FALLBACK_FONT = '"Noto Sans Tamil", "Latha", system-ui, sans-serif';
 
+/** True when a stroke never moved more than ~2% of the canvas: a tap. */
+function isTap(points: readonly (readonly [number, number])[]): boolean {
+  const [x0, y0] = points[0] ?? [0, 0];
+  return points.every(([x, y]) => Math.hypot(x - x0, y - y0) < 0.02);
+}
+
 export default function AuthorStudio({ lessons }: AuthorStudioProps) {
   const [selectedId, setSelectedId] = useState<string>(lessons[0]?.id ?? "");
   /** Committed strokes for the current recording (multi-stroke). */
@@ -277,15 +283,18 @@ export default function AuthorStudio({ lessons }: AuthorStudioProps) {
     isDrawingRef.current = false;
     pointsRef.current.push(pointFromEvent(e));
     const { w, h } = sizeRef.current;
-    const normalized = simplifyNormalizedPath(
-      normalizePath(pointsRef.current, w, h),
-    );
+    const raw = normalizePath(pointsRef.current, w, h);
+    const normalized = simplifyNormalizedPath(raw);
     pointsRef.current = [];
-    if (normalized.length >= 2) {
+    if (normalized.length >= 2 && !isTap(raw)) {
       // Append this stroke; the redraw effect repaints all committed strokes.
       setStrokes((prev) => [...prev, normalized]);
+    } else if (raw.length > 0) {
+      // A tap is a dot (the pulli ், the dots of ஃ): store it as a
+      // two-point stroke on one spot. Learners tap it the same way.
+      const dot = raw[0];
+      setStrokes((prev) => [...prev, [dot, [dot[0], dot[1]]]]);
     } else {
-      // A stray tap: discard and repaint what we have.
       redraw();
     }
   };

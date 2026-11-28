@@ -328,3 +328,13 @@ describe("author-mode helpers", () => {
     expect(simple[0][1]).toBe(0.1235);
   });
 });
+
+describe("dot strokes (pulli, the dots of ஃ)", () => {
+  it("a tap on the dot clears a two-point dot stroke", () => {
+    const dot: NormalizedPoint = [0.5, 0.1];
+    let s = createMultiStrokeSession([[dot, [0.5, 0.1]]], 390, 520, 40);
+    s = addFingerPointMulti(s, 195, 52);
+    expect(s.failure).toBeNull();
+    expect(s.done).toBe(true);
+  });
+});

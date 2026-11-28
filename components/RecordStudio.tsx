@@ -25,6 +25,8 @@ export interface StudioLetter {
   phonetic: string;
   audio: string;
   section: "vowel" | "consonant" | "sign" | "other";
+  /** Your own recordings to play as a guide, e.g. க then ஆ for கா. */
+  hint?: { label: string; audios: string[] };
 }
 
 /** Same key as Author mode, so the password is entered once per session. */
@@ -103,6 +105,15 @@ async function processTake(blob: Blob): Promise<Take | string> {
   } finally {
     void ctx.close();
   }
+}
+
+/** Play your own recordings one after another (the guide for a compound). */
+function playSequence(urls: string[]): void {
+  const [first, ...rest] = urls;
+  if (!first) return;
+  const a = new Audio(first);
+  a.onended = () => playSequence(rest);
+  void a.play().catch(() => undefined);
 }
 
 export default function RecordStudio({ letters }: { letters: StudioLetter[] }) {
@@ -309,12 +320,22 @@ export default function RecordStudio({ letters }: { letters: StudioLetter[] }) {
                           own ? "bg-forest text-cream" : "bg-wisdom-soft text-wisdom-deep"
                         }`}
                       >
-                        {own ? "Your voice" : "AI voice now"}
+                        {own ? "Your voice" : letter.audio ? "AI voice now" : "No sound yet"}
                       </span>
+                      {letter.hint && (
+                        <button
+                          type="button"
+                          onClick={() => playSequence(letter.hint!.audios)}
+                          className="ml-2 mt-1 inline-block rounded-full bg-sage-100 px-2 py-0.5 font-ui text-[11px] font-extrabold text-forest"
+                        >
+                          💡 {letter.hint.label}
+                        </button>
+                      )}
                     </div>
                     <button
                       type="button"
-                      onClick={() => play(letter.audio)}
+                      onClick={() => letter.audio && play(letter.audio)}
+                      disabled={!letter.audio}
                       aria-label={`Play the sound learners hear now for ${letter.glyph}`}
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cream font-ui text-lg text-forest shadow-node"
                     >
