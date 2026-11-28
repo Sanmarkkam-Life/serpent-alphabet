@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Compound, Sign } from "@/lib/signs";
 import { Button, Card } from "@/components/ui";
+import TraceTask from "@/components/TraceTask";
+import { compoundAsLesson } from "@/lib/compoundLesson";
 import { feedbackFail, feedbackFanfare, feedbackPass } from "@/lib/sfx";
 import {
   addXp,
@@ -24,6 +26,7 @@ type Step =
   | { kind: "meet" }
   | { kind: "build"; target: Compound; options: Compound[] }
   | { kind: "hear"; target: Compound; options: Compound[] }
+  | { kind: "trace"; target: Compound }
   | { kind: "read"; word: string; translit: string; meaning: string; options: string[] };
 
 const XP_PER_TASK = 10;
@@ -55,13 +58,17 @@ function buildQueue(sign: Sign): Step[] {
     target,
     options: withDistractors(target, sign.compounds),
   }));
+  // Trace up to two letters the author has drawn a guide for.
+  const trace: Step[] = shuffle(sign.compounds.filter((c) => c.trace.length > 0))
+    .slice(0, 2)
+    .map((target) => ({ kind: "trace", target }));
   const meanings = sign.words.map((w) => w.meaning);
   const read: Step[] = sign.words.map((w) => ({
     kind: "read",
     ...w,
     options: shuffle(meanings),
   }));
-  return [{ kind: "meet" }, ...build, ...hear, ...read];
+  return [{ kind: "meet" }, ...build, ...trace, ...hear, ...read];
 }
 
 function play(
@@ -103,7 +110,8 @@ export default function SignRunner({
 
   if (!queue) return null;
 
-  const total = 1 + (sign.kind === "set" ? 0 : 3) + 4 + sign.words.length;
+  const total =
+    1 + (sign.kind === "set" ? 0 : 3) + Math.min(2, sign.compounds.filter((c) => c.trace.length > 0).length) + 4 + sign.words.length;
   const progress = Math.min(1, (total - queue.length) / total);
 
   const reward = () => {
@@ -298,6 +306,24 @@ export default function SignRunner({
             />
           )}
         </Card>
+      )}
+
+      {step.kind === "trace" && (
+        <div className="flex flex-col gap-2">
+          <p className="text-center font-ui text-lg font-extrabold text-forest">
+            Trace <span className="font-tamil">{step.target.glyph}</span> ({step.target.translit})
+          </p>
+          <TraceTask
+            key={step.target.id}
+            lesson={compoundAsLesson(step.target, 0)}
+            isRedeeming={false}
+            onPass={() => {
+              reward();
+              next(true);
+            }}
+            onFail={() => next(false)}
+          />
+        </div>
       )}
 
       {step.kind === "hear" && (

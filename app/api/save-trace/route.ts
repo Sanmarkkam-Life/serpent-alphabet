@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getFile, GithubError, putFile } from "@/lib/github";
 import { sanitizeLessonId, validateTracePath } from "@/lib/traceValidation";
+import { COMPOUND_ID_RE } from "@/lib/signs";
 import { safeEqual } from "../_auth";
 import { resolveGithubConfig } from "../_github-config";
 
@@ -50,7 +51,10 @@ export async function POST(request: Request) {
   }
 
   // 2. Sanitize id (blocks path traversal).
-  const safeId = sanitizeLessonId(id);
+  // A compound letter ("ka_aa") keeps its trace in its sign file.
+  const compound =
+    typeof id === "string" && id.length <= 40 ? COMPOUND_ID_RE.exec(id) : null;
+  const safeId = compound ? compound[0] : sanitizeLessonId(id);
   if (!safeId) {
     return json({ error: "Invalid lesson id." }, 400);
   }
@@ -60,7 +64,9 @@ export async function POST(request: Request) {
   if (!validation.ok) {
     return json({ error: validation.reason }, 400);
   }
-  const filePath = `${LESSONS_DIR}/${safeId}.json`;
+  const filePath = compound
+    ? `content/signs/${compound[2]}.json`
+    : `${LESSONS_DIR}/${safeId}.json`;
 
   // 4-7. Read current file, set only trace_path, write back. Retry once on a
   // 409 (sha changed underneath us between the read and the write).
@@ -84,8 +90,20 @@ export async function POST(request: Request) {
     }
 
     // Only trace_path changes; every other field is preserved verbatim.
-    lesson.trace_path = validation.path;
-    const glyph = typeof lesson.glyph === "string" ? lesson.glyph : safeId;
+    if (compound) {
+      const traces =
+        typeof lesson.traces === "object" && lesson.traces !== null
+          ? (lesson.traces as Record<string, unknown>)
+          : {};
+      lesson.traces = { ...traces, [safeId]: validation.path };
+    } else {
+      lesson.trace_path = validation.path;
+    }
+    const glyph = compound
+      ? safeId
+      : typeof lesson.glyph === "string"
+        ? lesson.glyph
+        : safeId;
     // 2-space indent + trailing newline matches the repo's existing style.
     const serialized = JSON.stringify(lesson, null, 2) + "\n";
 

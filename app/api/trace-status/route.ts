@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getFile, GithubError, listDirectory } from "@/lib/github";
+import { signsFromRaw } from "@/lib/signs";
 import { countStrokePoints, normalizeTracePath } from "@/lib/trace";
 import { resolveGithubConfig } from "../_github-config";
 
@@ -87,8 +88,34 @@ export async function GET() {
       },
     );
 
-    const lessons = statuses
-      .filter((s): s is LessonStatus => s !== null)
+    // Compound letters: built from the live sign files on GitHub, so a
+    // fresh save shows before the next deploy.
+    const signEntries = (await listDirectory(config, "content/signs")).filter(
+      (e) => e.type === "file" && e.name.endsWith(".json"),
+    );
+    const raws = (
+      await mapWithConcurrency(signEntries, CONCURRENCY, async (entry) => {
+        try {
+          return JSON.parse((await getFile(config, `content/signs/${entry.name}`)).text);
+        } catch {
+          return null;
+        }
+      })
+    ).filter((r) => r !== null);
+    const signStatuses: LessonStatus[] = signsFromRaw(raws).flatMap((sign) =>
+      sign.compounds.map((c, i) => {
+        const points = countStrokePoints(c.trace);
+        return {
+          id: c.id,
+          glyph: c.glyph,
+          order: 1000 + sign.order * 100 + i,
+          hasTrace: points > 0,
+          points,
+        };
+      }),
+    );
+
+    const lessons = [...statuses.filter((s): s is LessonStatus => s !== null), ...signStatuses]
       .sort((a, b) => a.order - b.order);
 
     return NextResponse.json(
