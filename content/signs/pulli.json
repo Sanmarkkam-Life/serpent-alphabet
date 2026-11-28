@@ -1,0 +1,35 @@
+{
+  "id": "pulli",
+  "order": 0,
+  "sign": "்",
+  "vowel_id": null,
+  "vowel_glyph": null,
+  "sound": "",
+  "name": "The dot (pulli)",
+  "costume": "A dot on top takes away the soul sound: க (ka) becomes க் (k), the pure body letter. Tamil calls it mei, the body, alone.",
+  "image": null,
+  "audio": {},
+  "words": [
+    {
+      "word": "அம்மா",
+      "translit": "ammaa",
+      "meaning": "mother"
+    },
+    {
+      "word": "அப்பா",
+      "translit": "appaa",
+      "meaning": "father"
+    },
+    {
+      "word": "பால்",
+      "translit": "paal",
+      "meaning": "milk"
+    },
+    {
+      "word": "கண்",
+      "translit": "kaṇ",
+      "meaning": "eye"
+    }
+  ],
+  "words_approved": false
+}

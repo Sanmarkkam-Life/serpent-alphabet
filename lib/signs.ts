@@ -29,7 +29,9 @@ export interface Sign {
   order: number;
   sign: string;
   vowelId: string;
-  vowelGlyph: string;
+  vowelGlyph: string | null;
+  /** "set": a list of letters (Grantha), not a sign joined to consonants. */
+  kind: "sign" | "set";
   sound: string;
   name: string;
   costume: string;
@@ -103,15 +105,21 @@ export function getAllSigns(): Sign[] {
         id: raw.id,
         order: raw.order,
         sign: raw.sign,
-        vowelId: raw.vowel_id,
-        vowelGlyph: raw.vowel_glyph,
+        vowelId: raw.vowel_id ?? "",
+        vowelGlyph: raw.vowel_glyph ?? null,
         sound: raw.sound,
         name: raw.name,
         costume: raw.costume,
         irregular: raw.irregular === true,
         image: raw.image ?? null,
         words: raw.words ?? [],
-        compounds: buildCompounds(raw.id, raw.sign, raw.sound, audio),
+        kind: Array.isArray(raw.letters) ? "set" : "sign",
+        compounds: Array.isArray(raw.letters)
+          ? (raw.letters as { id: string; glyph: string; translit: string }[]).map((l) => {
+              const id = compoundId(l.id, raw.id);
+              return { id, consonantId: l.id, consonant: l.glyph, glyph: l.glyph, translit: l.translit, audio: audio[id] ?? null };
+            })
+          : buildCompounds(raw.id, raw.sign, raw.sound, audio),
       } as Sign;
     })
     .sort((a, b) => a.order - b.order);

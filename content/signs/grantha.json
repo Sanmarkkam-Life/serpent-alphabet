@@ -1,0 +1,63 @@
+{
+  "id": "grantha",
+  "order": 12,
+  "kind": "set",
+  "sign": "ஜ",
+  "vowel_id": null,
+  "vowel_glyph": null,
+  "sound": "",
+  "name": "The Grantha letters",
+  "costume": "Six extra letters for sounds that came into Tamil with other languages. You meet them in names and in words like ஜோதி (jothi), light.",
+  "letters": [
+    {
+      "id": "ja",
+      "glyph": "ஜ",
+      "translit": "ja"
+    },
+    {
+      "id": "sha",
+      "glyph": "ஷ",
+      "translit": "sha"
+    },
+    {
+      "id": "sa",
+      "glyph": "ஸ",
+      "translit": "sa"
+    },
+    {
+      "id": "ha",
+      "glyph": "ஹ",
+      "translit": "ha"
+    },
+    {
+      "id": "ksha",
+      "glyph": "க்ஷ",
+      "translit": "ksha"
+    },
+    {
+      "id": "sri",
+      "glyph": "ஸ்ரீ",
+      "translit": "srii"
+    }
+  ],
+  "image": null,
+  "audio": {},
+  "words": [
+    {
+      "word": "ஜோதி",
+      "translit": "jothi",
+      "meaning": "light"
+    },
+    {
+      "word": "ஜாடி",
+      "translit": "jaaṭi",
+      "meaning": "jar"
+    },
+    {
+      "word": "பஸ்",
+      "translit": "pas",
+      "meaning": "bus"
+    }
+  ],
+  "words_approved": false
+}

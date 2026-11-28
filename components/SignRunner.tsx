@@ -37,12 +37,13 @@ function withDistractors(target: Compound, all: Compound[]): Compound[] {
 
 function buildQueue(sign: Sign): Step[] {
   const picks = shuffle(sign.compounds);
-  const build: Step[] = picks.slice(0, 3).map((target) => ({
+  const nBuild = sign.kind === "set" ? 0 : 3;
+  const build: Step[] = picks.slice(0, nBuild).map((target) => ({
     kind: "build",
     target,
     options: withDistractors(target, sign.compounds),
   }));
-  const hear: Step[] = picks.slice(3, 7).map((target) => ({
+  const hear: Step[] = picks.slice(nBuild, nBuild + 4).map((target) => ({
     kind: "hear",
     target,
     options: withDistractors(target, sign.compounds),
@@ -94,7 +95,7 @@ export default function SignRunner({
 
   if (!queue) return null;
 
-  const total = 1 + 3 + 4 + sign.words.length;
+  const total = 1 + (sign.kind === "set" ? 0 : 3) + 4 + sign.words.length;
   const progress = Math.min(1, (total - queue.length) / total);
 
   const reward = () => {
@@ -130,9 +131,9 @@ export default function SignRunner({
           You learned {sign.name.toLowerCase()}!
         </h1>
         <p className="font-ui text-base text-forest-soft">
-          Every body letter can wear it now:{" "}
+          {sign.kind === "set" ? "You can read them now:" : "Every body letter can wear it now:"}{" "}
           <span className="font-tamil text-forest">
-            {sign.compounds.slice(0, 4).map((c) => c.glyph).join(" ")} … {sign.compounds[17]?.glyph}
+            {sign.compounds.slice(0, 4).map((c) => c.glyph).join(" ")} … {sign.compounds[sign.compounds.length - 1]?.glyph}
           </span>
           . +{xp} XP
         </p>
@@ -184,12 +185,14 @@ export default function SignRunner({
           )}
           <h1 className="font-ui text-2xl font-extrabold text-forest">{sign.name}</h1>
           <p className="font-ui text-base text-forest">{sign.costume}</p>
+          {sign.vowelGlyph && (
           <p className="font-ui text-sm text-forest-soft">
             It is the soul letter{" "}
             <span className="font-tamil text-lg text-forest">{sign.vowelGlyph}</span> ({sign.sound})
             giving life to a body letter.
           </p>
-          {sign.irregular && (
+          )}
+          {(sign.irregular || sign.kind === "set" || sign.id === "pulli") && (
             <div className="grid w-full grid-cols-6 gap-1.5">
               {sign.compounds.map((c) => (
                 <button
@@ -204,6 +207,7 @@ export default function SignRunner({
               ))}
             </div>
           )}
+          {sign.kind === "sign" && (
           <div className="flex items-center gap-3 font-tamil text-5xl font-bold text-forest">
             <span>{sign.compounds[0]?.consonant}</span>
             <span className="font-ui text-2xl">+</span>
@@ -211,6 +215,7 @@ export default function SignRunner({
             <span className="font-ui text-2xl">=</span>
             <span>{sign.compounds[0]?.glyph}</span>
           </div>
+          )}
           {vowelAudio && (
             <Button variant="secondary" onClick={() => play(vowelAudio, audioRef)}>
               🔊 Hear {sign.sound}
