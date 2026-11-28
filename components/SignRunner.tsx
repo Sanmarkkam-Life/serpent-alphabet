@@ -5,7 +5,14 @@ import { useEffect, useRef, useState } from "react";
 import type { Compound, Sign } from "@/lib/signs";
 import { Button, Card } from "@/components/ui";
 import { feedbackFail, feedbackFanfare, feedbackPass } from "@/lib/sfx";
-import { addXp, markLessonComplete, recordTaskActivity } from "@/lib/progress";
+import {
+  addXp,
+  isLessonComplete,
+  loadProgress,
+  markLessonComplete,
+  recordReview,
+  recordTaskActivity,
+} from "@/lib/progress";
 
 /**
  * A vowel-sign lesson (uyirmei): meet the sign, build letters with it,
@@ -80,6 +87,7 @@ export default function SignRunner({
   const [joined, setJoined] = useState(false);
   const [xp, setXp] = useState(0);
   const [done, setDone] = useState(false);
+  const mistakesRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Shuffle after mount only, so the server and phone render the same HTML.
@@ -108,8 +116,15 @@ export default function SignRunner({
   const next = (correct: boolean) => {
     const [head, ...rest] = queue;
     const after = correct || head.kind === "meet" ? rest : [...rest, head];
+    if (!correct && head.kind !== "meet") mistakesRef.current += 1;
     if (after.length === 0) {
-      markLessonComplete(`sign-${sign.id}`);
+      const lessonId = `sign-${sign.id}`;
+      // A finished lesson run again is a spaced review.
+      if (isLessonComplete(loadProgress(), lessonId)) {
+        recordReview(lessonId, mistakesRef.current === 0);
+      } else {
+        markLessonComplete(lessonId);
+      }
       feedbackFanfare();
       setDone(true);
     }

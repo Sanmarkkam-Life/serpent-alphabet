@@ -419,6 +419,17 @@ export default function HomePath({ lessons, signs = [] }: HomePathProps) {
         .map((id) => lessons.find((l) => l.id === id))
         .filter((l): l is (typeof lessons)[number] => l !== undefined)
     : [];
+  // Sign lessons due for review (progress id "sign-<id>").
+  const dueSigns = loaded
+    ? dueLessonIds(
+        progress.reviews,
+        localDateString(new Date()),
+        signs.map((s) => `sign-${s.id}`),
+      )
+        .map((id) => signs.find((s) => `sign-${s.id}` === id))
+        .filter((s): s is HomePathSign => s !== undefined)
+    : [];
+  const dueCount = dueLessons.length + dueSigns.length;
 
   const toggleMute = (): void => {
     setProgress(setMute(!progress.mute));
@@ -617,13 +628,13 @@ export default function HomePath({ lessons, signs = [] }: HomePathProps) {
       </div>
 
       {/* Spaced review: finished letters that are due again today. */}
-      {dueLessons.length > 0 && (
+      {dueCount > 0 && (
         <div className="mx-auto mb-4 max-w-md rounded-2xl border-2 border-serpent bg-serpent-soft px-4 py-3">
           <p className="font-ui text-sm font-extrabold text-forest-deep">
             <span aria-hidden="true">🔁</span>{" "}
-            {dueLessons.length === 1
-              ? "1 letter is ready for review"
-              : `${dueLessons.length} letters are ready for review`}
+            {dueCount === 1
+              ? "1 lesson is ready for review"
+              : `${dueCount} lessons are ready for review`}
           </p>
           <p className="mt-0.5 font-ui text-xs text-forest">
             A quick review keeps each letter in your memory.
@@ -637,6 +648,16 @@ export default function HomePath({ lessons, signs = [] }: HomePathProps) {
                 className="flex h-12 min-w-[48px] items-center justify-center rounded-xl bg-cream-soft px-3 font-tamil text-2xl font-bold text-forest shadow-leaf"
               >
                 {lesson.glyph}
+              </Link>
+            ))}
+            {dueSigns.map((sign) => (
+              <Link
+                key={sign.id}
+                href={`/sign/${sign.id}`}
+                aria-label={`Review ${sign.name}`}
+                className="flex h-12 min-w-[48px] items-center justify-center rounded-xl bg-cream-soft px-3 font-tamil text-2xl font-bold text-forest shadow-leaf"
+              >
+                {sign.sign}
               </Link>
             ))}
           </div>

@@ -1,0 +1,31 @@
+{
+  "id": "granthasigns",
+  "order": 13,
+  "generate": "grantha",
+  "sign": "ஜா",
+  "vowel_id": null,
+  "vowel_glyph": null,
+  "sound": "",
+  "name": "Grantha with signs",
+  "costume": "The Grantha letters wear the same signs as every body letter: ஜ (ja) becomes ஜா (jaa), ஜி (ji), ஜோ (jo), and with the dot ஜ் (j).",
+  "image": null,
+  "audio": {},
+  "words": [
+    {
+      "word": "ஜோதி",
+      "translit": "jothi",
+      "meaning": "light"
+    },
+    {
+      "word": "ஜூஸ்",
+      "translit": "juus",
+      "meaning": "juice"
+    },
+    {
+      "word": "ஷூ",
+      "translit": "shuu",
+      "meaning": "shoe"
+    }
+  ],
+  "words_approved": false
+}

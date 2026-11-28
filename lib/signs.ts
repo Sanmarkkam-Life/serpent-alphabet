@@ -95,7 +95,7 @@ const SIGNS_DIR = path.join(process.cwd(), "content", "signs");
 
 export function getAllSigns(): Sign[] {
   if (!fs.existsSync(SIGNS_DIR)) return [];
-  return fs
+  const signs: Sign[] = fs
     .readdirSync(SIGNS_DIR)
     .filter((f) => f.endsWith(".json"))
     .map((f) => {
@@ -113,8 +113,11 @@ export function getAllSigns(): Sign[] {
         irregular: raw.irregular === true,
         image: raw.image ?? null,
         words: raw.words ?? [],
-        kind: Array.isArray(raw.letters) ? "set" : "sign",
-        compounds: Array.isArray(raw.letters)
+        kind: Array.isArray(raw.letters) || raw.generate ? "set" : "sign",
+        generate: raw.generate ?? null,
+        compounds: raw.generate
+          ? []
+          : Array.isArray(raw.letters)
           ? (raw.letters as { id: string; glyph: string; translit: string }[]).map((l) => {
               const id = compoundId(l.id, raw.id);
               return { id, consonantId: l.id, consonant: l.glyph, glyph: l.glyph, translit: l.translit, audio: audio[id] ?? null };
@@ -123,7 +126,32 @@ export function getAllSigns(): Sign[] {
       } as Sign;
     })
     .sort((a, b) => a.order - b.order);
+  // "Grantha with signs": every Grantha letter wearing every sign.
+  for (const set of signs) {
+    if ((set as Sign & { generate?: string | null }).generate !== "grantha") continue;
+    const audio = set.compounds.reduce<Record<string, string>>((m, c) => (c.audio ? { ...m, [c.id]: c.audio } : m), {});
+    const raw = JSON.parse(fs.readFileSync(path.join(SIGNS_DIR, `${set.id}.json`), "utf8"));
+    const saved = (raw.audio ?? {}) as Record<string, string>;
+    set.compounds = signs
+      .filter((s) => s.kind === "sign")
+      .flatMap((s) =>
+        GRANTHA_ROOTS.map((g) => {
+          const id = compoundId(`${g.id}${s.order}`, set.id);
+          return { id, consonantId: g.id, consonant: g.glyph, glyph: g.glyph + s.sign, translit: g.root + s.sound, audio: saved[id] ?? audio[id] ?? null };
+        }),
+      );
+  }
+  return signs;
 }
+
+/** Grantha letters that join with vowel signs (ஸ்ரீ is a fixed form). */
+export const GRANTHA_ROOTS = [
+  { id: "ja", glyph: "ஜ", root: "j" },
+  { id: "sha", glyph: "ஷ", root: "sh" },
+  { id: "sa", glyph: "ஸ", root: "s" },
+  { id: "ha", glyph: "ஹ", root: "h" },
+  { id: "ksha", glyph: "க்ஷ", root: "ksh" },
+];
 
 export function getSignById(id: string): Sign | null {
   return getAllSigns().find((s) => s.id === id) ?? null;

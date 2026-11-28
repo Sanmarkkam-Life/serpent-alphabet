@@ -1,0 +1,81 @@
+{
+  "id": "numbers",
+  "order": 14,
+  "sign": "௧",
+  "vowel_id": null,
+  "vowel_glyph": null,
+  "sound": "",
+  "name": "Tamil numbers",
+  "costume": "Tamil has its own number signs. Today most people write 1, 2, 3, but you will still see these in old books, calendars and temple writing.",
+  "letters": [
+    {
+      "id": "n0",
+      "glyph": "௦",
+      "translit": "0 · puujjiyam"
+    },
+    {
+      "id": "n1",
+      "glyph": "௧",
+      "translit": "1 · onru"
+    },
+    {
+      "id": "n2",
+      "glyph": "௨",
+      "translit": "2 · irandu"
+    },
+    {
+      "id": "n3",
+      "glyph": "௩",
+      "translit": "3 · muunru"
+    },
+    {
+      "id": "n4",
+      "glyph": "௪",
+      "translit": "4 · naangu"
+    },
+    {
+      "id": "n5",
+      "glyph": "௫",
+      "translit": "5 · ainthu"
+    },
+    {
+      "id": "n6",
+      "glyph": "௬",
+      "translit": "6 · aaru"
+    },
+    {
+      "id": "n7",
+      "glyph": "௭",
+      "translit": "7 · ezhu"
+    },
+    {
+      "id": "n8",
+      "glyph": "௮",
+      "translit": "8 · ettu"
+    },
+    {
+      "id": "n9",
+      "glyph": "௯",
+      "translit": "9 · onpathu"
+    },
+    {
+      "id": "n10",
+      "glyph": "௰",
+      "translit": "10 · pathu"
+    },
+    {
+      "id": "n100",
+      "glyph": "௱",
+      "translit": "100 · nuuru"
+    },
+    {
+      "id": "n1000",
+      "glyph": "௲",
+      "translit": "1000 · aayiram"
+    }
+  ],
+  "image": null,
+  "audio": {},
+  "words": [],
+  "words_approved": false
+}
