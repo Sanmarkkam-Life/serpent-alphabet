@@ -1,0 +1,30 @@
+{
+  "id": "ee",
+  "order": 5,
+  "sign": "ே",
+  "vowel_id": "ee",
+  "vowel_glyph": "ஏ",
+  "sound": "ee",
+  "name": "The double curl in front",
+  "costume": "A curl with a loop stands BEFORE the letter and the sound is long: க (ka) becomes கே (kee).",
+  "image": null,
+  "audio": {},
+  "words": [
+    {
+      "word": "மேலே",
+      "translit": "meelee",
+      "meaning": "above"
+    },
+    {
+      "word": "தேதி",
+      "translit": "theethi",
+      "meaning": "date"
+    },
+    {
+      "word": "வேலி",
+      "translit": "veeli",
+      "meaning": "fence"
+    }
+  ],
+  "words_approved": false
+}

@@ -229,7 +229,7 @@ export default function RecordStudio({ letters }: { letters: StudioLetter[] }) {
   const groups: { title: string; key: StudioLetter["section"] }[] = [
     { title: "Vowels · உயிர்", key: "vowel" },
     { title: "Consonants · மெய்", key: "consonant" },
-    { title: "Compound letters · ா (aa)", key: "sign" },
+    { title: "Compound letters · உயிர்மெய் (sign by sign)", key: "sign" },
     { title: "Other", key: "other" },
   ];
   const savedCount = Object.values(rows).filter((r) => r.kind === "saved").length;

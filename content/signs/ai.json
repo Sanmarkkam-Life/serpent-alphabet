@@ -1,0 +1,30 @@
+{
+  "id": "ai",
+  "order": 6,
+  "sign": "ை",
+  "vowel_id": "ai",
+  "vowel_glyph": "ஐ",
+  "sound": "ai",
+  "name": "The twin curls in front",
+  "costume": "Two joined curls stand BEFORE the letter: க (ka) becomes கை (kai).",
+  "image": null,
+  "audio": {},
+  "words": [
+    {
+      "word": "இலை",
+      "translit": "ilai",
+      "meaning": "leaf"
+    },
+    {
+      "word": "மலை",
+      "translit": "malai",
+      "meaning": "mountain"
+    },
+    {
+      "word": "கடை",
+      "translit": "kaṭai",
+      "meaning": "shop"
+    }
+  ],
+  "words_approved": false
+}

@@ -1,0 +1,30 @@
+{
+  "id": "e",
+  "order": 4,
+  "sign": "ெ",
+  "vowel_id": "e",
+  "vowel_glyph": "எ",
+  "sound": "e",
+  "name": "The curl in front",
+  "costume": "A single curl stands BEFORE the letter, but is said after it: க (ka) becomes கெ (ke).",
+  "image": null,
+  "audio": {},
+  "words": [
+    {
+      "word": "செடி",
+      "translit": "cheṭi",
+      "meaning": "plant"
+    },
+    {
+      "word": "வெளி",
+      "translit": "veḷi",
+      "meaning": "outside"
+    },
+    {
+      "word": "பெரிய",
+      "translit": "periya",
+      "meaning": "big"
+    }
+  ],
+  "words_approved": false
+}

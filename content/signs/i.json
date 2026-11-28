@@ -1,0 +1,30 @@
+{
+  "id": "i",
+  "order": 2,
+  "sign": "ி",
+  "vowel_id": "i",
+  "vowel_glyph": "இ",
+  "sound": "i",
+  "name": "The little hook",
+  "costume": "A little hook rises from the top right of the letter: க (ka) becomes கி (ki). Watch ட: its hook joins in its own way (டி).",
+  "image": null,
+  "audio": {},
+  "words": [
+    {
+      "word": "கிளி",
+      "translit": "kiḷi",
+      "meaning": "parrot"
+    },
+    {
+      "word": "நதி",
+      "translit": "nathi",
+      "meaning": "river"
+    },
+    {
+      "word": "வலி",
+      "translit": "vali",
+      "meaning": "pain"
+    }
+  ],
+  "words_approved": false
+}

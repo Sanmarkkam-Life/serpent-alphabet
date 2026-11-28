@@ -1,0 +1,30 @@
+{
+  "id": "oo",
+  "order": 8,
+  "sign": "ோ",
+  "vowel_id": "oo",
+  "vowel_glyph": "ஓ",
+  "sound": "oo",
+  "name": "Double curl in front, tail behind",
+  "costume": "The double curl (ே) in front and the long tail (ா) behind: க (ka) becomes கோ (koo).",
+  "image": null,
+  "audio": {},
+  "words": [
+    {
+      "word": "போ",
+      "translit": "poo",
+      "meaning": "go"
+    },
+    {
+      "word": "கோடை",
+      "translit": "kooṭai",
+      "meaning": "summer"
+    },
+    {
+      "word": "தோழி",
+      "translit": "thoozhi",
+      "meaning": "friend (a woman)"
+    }
+  ],
+  "words_approved": false
+}

@@ -1,0 +1,30 @@
+{
+  "id": "o",
+  "order": 7,
+  "sign": "ொ",
+  "vowel_id": "o",
+  "vowel_glyph": "ஒ",
+  "sound": "o",
+  "name": "Curl in front, tail behind",
+  "costume": "The letter wears the front curl (ெ) and the long tail (ா) together: க (ka) becomes கொ (ko).",
+  "image": null,
+  "audio": {},
+  "words": [
+    {
+      "word": "கொடி",
+      "translit": "koṭi",
+      "meaning": "flag"
+    },
+    {
+      "word": "மொழி",
+      "translit": "mozhi",
+      "meaning": "language"
+    },
+    {
+      "word": "பொரி",
+      "translit": "pori",
+      "meaning": "puffed rice"
+    }
+  ],
+  "words_approved": false
+}

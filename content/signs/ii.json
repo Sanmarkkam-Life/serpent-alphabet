@@ -1,0 +1,30 @@
+{
+  "id": "ii",
+  "order": 3,
+  "sign": "ீ",
+  "vowel_id": "ii",
+  "vowel_glyph": "ஈ",
+  "sound": "ii",
+  "name": "The little loop",
+  "costume": "The hook closes into a loop on top and the sound grows long: க (ka) becomes கீ (kii). ட again joins its own way (டீ).",
+  "image": null,
+  "audio": {},
+  "words": [
+    {
+      "word": "நீ",
+      "translit": "nii",
+      "meaning": "you"
+    },
+    {
+      "word": "தீ",
+      "translit": "thii",
+      "meaning": "fire"
+    },
+    {
+      "word": "ஈ",
+      "translit": "ii",
+      "meaning": "fly"
+    }
+  ],
+  "words_approved": false
+}

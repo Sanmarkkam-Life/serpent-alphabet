@@ -1,0 +1,14 @@
+{
+  "id": "au",
+  "order": 9,
+  "sign": "ௌ",
+  "vowel_id": "au",
+  "vowel_glyph": "ஔ",
+  "sound": "au",
+  "name": "Curl in front, ள behind",
+  "costume": "The front curl (ெ) and a small ள-shaped tail behind: க (ka) becomes கௌ (kau). It is rare in everyday words.",
+  "image": null,
+  "audio": {},
+  "words": [],
+  "words_approved": false
+}
