@@ -1,0 +1,31 @@
+{
+  "id": "u",
+  "order": 10,
+  "sign": "ு",
+  "vowel_id": "u",
+  "vowel_glyph": "உ",
+  "sound": "u",
+  "name": "The changing foot",
+  "costume": "This sign does not sit beside the letter: it changes the letter's own foot, in a few different ways. Look at all 18 and notice the families that change alike.",
+  "irregular": true,
+  "image": null,
+  "audio": {},
+  "words": [
+    {
+      "word": "குடை",
+      "translit": "kuṭai",
+      "meaning": "umbrella"
+    },
+    {
+      "word": "பசு",
+      "translit": "pasu",
+      "meaning": "cow"
+    },
+    {
+      "word": "முடி",
+      "translit": "muṭi",
+      "meaning": "hair"
+    }
+  ],
+  "words_approved": false
+}

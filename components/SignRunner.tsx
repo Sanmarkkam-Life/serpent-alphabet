@@ -189,6 +189,21 @@ export default function SignRunner({
             <span className="font-tamil text-lg text-forest">{sign.vowelGlyph}</span> ({sign.sound})
             giving life to a body letter.
           </p>
+          {sign.irregular && (
+            <div className="grid w-full grid-cols-6 gap-1.5">
+              {sign.compounds.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => play(c.audio, audioRef)}
+                  className="flex flex-col items-center rounded-xl bg-cream py-1"
+                >
+                  <span className="font-tamil text-2xl font-bold text-forest">{c.glyph}</span>
+                  <span className="font-ui text-[10px] text-forest-soft">{c.translit}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-3 font-tamil text-5xl font-bold text-forest">
             <span>{sign.compounds[0]?.consonant}</span>
             <span className="font-ui text-2xl">+</span>

@@ -1,0 +1,31 @@
+{
+  "id": "uu",
+  "order": 11,
+  "sign": "ூ",
+  "vowel_id": "uu",
+  "vowel_glyph": "ஊ",
+  "sound": "uu",
+  "name": "The longer changing foot",
+  "costume": "Like ு, it changes the letter's own foot, and the sound grows long. Compare each one with its ு partner.",
+  "irregular": true,
+  "image": null,
+  "audio": {},
+  "words": [
+    {
+      "word": "பூ",
+      "translit": "puu",
+      "meaning": "flower"
+    },
+    {
+      "word": "பூனை",
+      "translit": "puunai",
+      "meaning": "cat"
+    },
+    {
+      "word": "கூடை",
+      "translit": "kuuṭai",
+      "meaning": "basket"
+    }
+  ],
+  "words_approved": false
+}

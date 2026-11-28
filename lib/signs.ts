@@ -33,6 +33,8 @@ export interface Sign {
   sound: string;
   name: string;
   costume: string;
+  /** The sign changes the letter's shape (u, uu): show all 18 first. */
+  irregular: boolean;
   image: string | null;
   words: SignWord[];
   compounds: Compound[];
@@ -106,6 +108,7 @@ export function getAllSigns(): Sign[] {
         sound: raw.sound,
         name: raw.name,
         costume: raw.costume,
+        irregular: raw.irregular === true,
         image: raw.image ?? null,
         words: raw.words ?? [],
         compounds: buildCompounds(raw.id, raw.sign, raw.sound, audio),
