@@ -138,7 +138,10 @@ export default function PronounceTask({
         if (mountedRef.current) setSelfPlaying(true);
       })
       .catch(() => {
-        if (mountedRef.current) setSelfPlaying(false);
+        if (mountedRef.current) {
+          setSelfPlaying(false);
+          setNote("Your phone didn't play the recording back. Try once more.");
+        }
       });
   }, [recorded]);
 
